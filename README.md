@@ -1,120 +1,74 @@
 <p align="center">
-  <h1 align="center">ads-ai</h1>
-  <p align="center">Multi-Agent Advertising Intelligence Pipeline for end-to-end campaign generation.</p>
+  <h1 align="center">cinestudio</h1>
+  <p align="center">Multi-agent AI film rendering platform — 30-second spots to 20-minute shorts, orchestrated by a Strands Graph with a parallel render Workflow.</p>
   <p align="center">
-    <a href="#installation"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue" alt="Python"></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%E2%89%A526-blue" alt="Node"></a>
+    <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16-black" alt="Next.js"></a>
+    <a href="https://github.com/strands-agents/harness-sdk"><img src="https://img.shields.io/badge/Strands-TS-purple" alt="Strands"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
-    <a href="https://github.com/sachncs/ads-ai/actions"><img src="https://img.shields.io/github/actions/workflow/status/sachncs/ads-ai/ci.yml?branch=master" alt="CI"></a>
-    <a href="https://pypi.org/project/ads-ai/"><img src="https://img.shields.io/pypi/v/ads-ai" alt="PyPI"></a>
-    <a href="https://github.com/sachncs/ads-ai/stargazers"><img src="https://img.shields.io/github/stars/sachncs/ads-ai" alt="Stars"></a>
   </p>
 </p>
 
-**ads-ai** is a production-grade, multi-agent AI framework for end-to-end
-advertising campaign generation. The system extracts intelligence from
-product URLs, synthesizes strategic briefs, generates creative variants,
-evaluates them against quantifiable quality thresholds, and produces
-video assets ready for deployment.
+**cinestudio** is a production-grade, multi-agent film rendering web app. You give it a
+logline or treatment; 17 specialized agents coordinate through a deterministic Graph
+plus a parallel render Workflow to produce a 30-second-to-20-minute film — script,
+characters, world, storyboard, rendered shots, score, sound design, color, voice, and
+distribution package included.
+
+The architecture is a direct port of the Strands multi-agent patterns
+([docs](https://strandsagents.com/docs/user-guide/concepts/multi-agent/multi-agent-patterns/)):
+**Graph** for the spine, a custom **Workflow Node** for parallel shot rendering, and
+**conditional edges** that route between iterate / proceed based on the composite
+quality score.
 
 ---
 
 ## Features
 
-- **13-Step Automated Pipeline** — Programmatic evaluation gates ensure every ad variant meets brand, clarity, and intent thresholds before proceeding to production
-- **19 Specialized Agents** — Domain-expert agents for strategy, audience modeling, creative generation, compliance validation, and asset production
-- **Veo 3.1 Video Synthesis** — Direct integration with Google's Veo 3.1 model for generating high-fidelity video advertisements from structured scripts
-- **Quantified Quality Enforcement** — Built-in [Quality Standards](docs/QUALITY_STANDARDS.md) that gate creative production based on measurable, AI-evaluated metrics
-- **Dynamic Pipeline Stages** — `PipelineStageRegistry` with declarative configurations, dependency resolution, topological sorting, and configurable retry policies
-- **CLI + Python API** — Use the `ads-ai` CLI or import the SDK directly
-- **Validated Outputs** — All inter-stage payloads are Pydantic v2 models
-- **Multi-Provider LLM** — Pluggable provider abstraction; swap Gemini for any other model with one configuration change
-
----
-
-## Installation
-
-### From PyPI
-
-```bash
-pip install ads-ai
-```
-
-### From source
-
-```bash
-git clone https://github.com/sachncs/ads-ai.git
-cd ads-ai
-pip install -e .
-```
-
-### With dev dependencies
-
-```bash
-pip install -e ".[dev,test,lint]"
-```
-
-**Prerequisites:** Python 3.10 or higher, Google AI Studio API key
-([Get one here](https://aistudio.google.com/apikey)).
+- **17 specialized agents** coordinated by a Strands Graph — Showrunner, Script Writer,
+  Character Designer, World Builder, Storyboard, Shot Planner, Render Dispatcher,
+  Continuity Checker, Critic, Iteration Controller, Scorer, Editor, Colorist, Composer,
+  Sound Designer, Voice Casting, Rights Clearance, Distribution
+- **Parallel render Workflow** — shots are pre-batched by style tag and fanned out
+  concurrently across **Veo 3.1**, **Sora**, and **Runway** at per-provider
+  concurrency limits
+- **Multi-provider text LLM** — Amazon Bedrock (default), Anthropic, OpenAI,
+  Google Gemini, Ollama, or MiniMax. Configured through the onboarding screen
+- **Surgical iteration** — the Critic scores each shot across 10 dimensions; only
+  failing shots are re-rendered, preserving GO shots verbatim
+- **Live SSE updates** — the run detail page subscribes to a server-sent-event stream
+  and renders a per-agent timeline, event log, and JSON output inspector
+- **Quantified quality enforcement** — composite quality report drives GO / NO-GO /
+  CONDITIONAL decisions
+- **Cinestudio brief → Script → Storyboard → Render → Score → Compose → Distribute** —
+  full pipeline from idea to YouTube / Vimeo / festival export presets
+- **PLD-ready outputs** — distribution package with container/codec/resolution/aspect
+  specs, caption tracks, festival applications
 
 ---
 
 ## Quick Start
 
-### CLI
-
 ```bash
-# URL mode — extracts product context automatically
-ads-ai --url "https://example.com/product" --goal "Maximize Sales"
-
-# Explicit mode — provide product and audience directly
-ads-ai --product "Ergonomic Chair" --audience "Remote Workers" --goal "Drive Conversions"
-
-# JSON output for downstream tooling
-ads-ai --url "https://example.com/product" --goal "Brand Awareness" --output json
+git clone https://github.com/your-org/cinestudio.git
+cd cinestudio
+pnpm install
+pnpm db:migrate
+pnpm dev
 ```
 
-### Configuration
+Visit `http://localhost:3000` — the onboarding screen will ask you to choose a text
+provider. After saving, you land on the dashboard and can start a film.
 
-```bash
-cp .env.example .env
-# Edit .env and set GEMINI_API_KEY
-```
+### Prerequisites
 
-### Python API
-
-```python
-from ads_ai import Pipeline, URLIntelligenceAgent, StrategyAgent
-
-# Build a pipeline programmatically
-pipeline = Pipeline()
-pipeline.add_stage(URLIntelligenceAgent())
-pipeline.add_stage(StrategyAgent())
-
-result = await pipeline.run(
-    url="https://example.com/product",
-    goal="Drive Conversions",
-)
-
-print(result.strategy_brief)
-```
-
-For detailed setup instructions, see
-[docs/getting-started.md](docs/getting-started.md).
-
----
-
-## Configuration
-
-| Setting | Env Variable | Default | Description |
-|---------|--------------|---------|-------------|
-| Gemini API key | `GEMINI_API_KEY` | *(required)* | Google AI Studio API key |
-| Model | `ADS_AI_MODEL` | `gemini-3.1-pro` | LLM model identifier |
-| Veo model | `ADS_AI_VEO_MODEL` | `veo-3.1` | Video generation model |
-| Log level | `ADS_AI_LOG_LEVEL` | `INFO` | Logging verbosity |
-| Max retries | `ADS_AI_MAX_RETRIES` | `3` | Retry count per stage |
-| Artifact dir | `ADS_AI_ARTIFACT_DIR` | `./artifacts` | Output directory for campaign assets |
-
-See [`.env.example`](.env.example) for the full template.
+- **Node 26+** (see `package.json` — `engines.node >= 26.0.0`)
+- **pnpm 9+**
+- A **model provider** with API access (Bedrock, Anthropic, OpenAI, Gemini, Ollama,
+  or MiniMax)
+- A **render provider** if you want video output (Veo 3.1, Sora, or Runway). If you
+  have none, the platform still produces the brief / script / storyboard / color /
+  audio plan and you can render shots manually later.
 
 ---
 
@@ -122,220 +76,137 @@ See [`.env.example`](.env.example) for the full template.
 
 ```mermaid
 graph TD
-    User([User Input]) --> URL[URL Intelligence Agent]
-    URL --> Budget[Budget Inference Agent]
-    Budget --> Strategy[Strategy Agent]
-    Strategy --> Audience[Audience Agent]
-    Audience --> Creative[Creative Agent]
-    Creative --> Eval[Evaluation Agents x5]
-    Eval -- Feedback --> Iteration[Iteration Controller]
-    Iteration --> Creative
-    Eval -- Success --> Adaptation[Platform Adaptation]
-    Adaptation --> Compliance[Compliance Agent]
-    Compliance --> Prod[Asset Production Agent]
-    Prod --> Video[Video Generation Agent]
-    Video --> Output([Final Campaign Assets])
+  Showrunner -- brief --> ScriptWriter
+  ScriptWriter -- script --> CharacterDesigner
+  CharacterDesigner -- cast --> WorldBuilder
+  WorldBuilder -- world --> Storyboard
+  Storyboard -- storyboard --> ShotPlanner
+  ShotPlanner -- batches --> RenderDispatch
+  RenderDispatch -- renderResults --> Continuity
+  Continuity -- issues --> Critique
+  Critique -- critique --> Scoring
+  Scoring -- composite --> IterationController
+  IterationController -- continue? --> RenderDispatch
+  IterationController -- proceed --> Editor
+  Editor --> Colorist --> Composer --> Sound --> Voice --> Distribution --> RightsClearance
 ```
 
-| Stage | Agent | Purpose |
-|-------|-------|---------|
-| 0 | URLIntelligenceAgent | Extract product context from a URL |
-| 0.5 | BudgetInferenceAgent | Auto-infer budget when not provided |
-| 1 | StrategyAgent | Generate strategy brief with KPIs |
-| 2 | AudienceAgent | Model behavioral personas |
-| 3 | CreativeAgent | Generate 3-5 ad script variants |
-| 4 | Evaluation Agents (x5) | Parallel quality evaluation |
-| 5 | ScoringAgent | Composite GO/NO-GO scoring |
-| 6 | IterationControllerAgent | Refinement directives for failing variants |
-| 7 | PlatformAdaptationAgent | Platform-specific adaptation |
-| 8 | ComplianceRiskAgent | Legal and brand safety compliance |
-| 9 | AssetProductionAgent | Shot-by-shot production planning |
-| 10 | ExternalValidationAgent | A/B test design |
-| 11 | DeploymentExperimentationAgent | Launch timeline and scaling |
-| 12 | KnowledgeLearningAgent | Pattern capture from campaigns |
-| 13 | VideoGenerationAgent | Veo 3.1 video synthesis |
+| # | Agent | Pattern Role | Output |
+|--:|-------|--------------|--------|
+| 0 | Showrunner | Graph entry | CinestudioBrief |
+| 1 | ScriptWriter | Graph | ScriptBreakdown |
+| 2 | CharacterDesigner | Graph | CharacterCast |
+| 3 | WorldBuilder | Graph | WorldDesign |
+| 4 | Storyboard | Graph | Storyboard (with render batches) |
+| 5 | ShotPlanner | Graph | RenderBatchPlan[] |
+| 6 | RenderDispatcher | **Custom Node** (parallel Workflow) | ShotRenderResult[] |
+| 7 | ContinuityChecker | Graph | ContinuityIssue[] |
+| 8 | Critic | Graph | CritiqueReport (10 dimensions) |
+| 9 | IterationController | Graph (cycle) | IterationControlReport |
+| 10 | Scorer | Graph | CompositeQualityReport |
+| 11 | Editor | Graph | AssemblyPlan |
+| 12 | Colorist | Graph | ColorGradeDirection |
+| 13 | Composer | Graph | ScorePlan |
+| 14 | SoundDesigner | Graph | SoundDesignPlan |
+| 15 | VoiceCasting | Graph | VoiceCast |
+| 16 | Distribution | Graph | DistributionPackage |
+| 17 | RightsClearance | Graph (terminal) | RightsReport |
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture
-deep-dive.
+The **iteration cycle** (`Scoring -> IterationController -> RenderDispatcher`) is
+bounded by `defaults.maxIterations` and the composite's `recommendation`. When the
+Critic + Scorer decide all shots are GO, the cycle breaks and execution flows into
+the Editor -> Colorist -> ... -> RightsClearance spine.
 
-### Agent Workforce
-
-| Agent | Responsibility | Output |
-|:------|:---------------|:-------|
-| **StrategyAgent** | Strategic pillars, KPIs, and pre-release targets | `StrategyBrief` |
-| **AudienceAgent** | Behavioral persona modeling and intent simulation | `AudienceSegments` |
-| **CreativeAgent** | Narrative structure, hooks, and visual cue design | `CreativeVariants` |
-| **ScoringAgent** | Multi-dimensional readiness gating (GO/NO-GO) | `CompositeReadinessReport` |
-| **VideoGenAgent** | Cinematic prompt synthesis and Veo rendering | `VideoGenerationResult` |
-| *...and 14 more* | See [Agents Overview](ads_ai/agents/README.md) | |
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the deep dive.
 
 ---
 
-## Examples
+## Configuration
 
-### Run a campaign from a URL
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `textProvider.provider` | `bedrock` | One of: bedrock / anthropic / openai / google / ollama / minimax |
+| `textProvider.model` | `global.anthropic.claude-sonnet-4-6` | Model identifier |
+| `renderProviders.veo.enabled` | `true` | Toggle Veo 3.1 |
+| `renderProviders.sora.enabled` | `false` | Toggle OpenAI Sora |
+| `renderProviders.runway.enabled` | `false` | Toggle Runway Gen-3 |
+| `defaults.maxIterations` | `3` | Critic iteration cycles |
+| `defaults.qualityThreshold` | `70` | Composite GO threshold |
+| `defaults.aspectRatio` | `16:9` | Default aspect for new runs |
+| `defaults.targetRuntimeSeconds` | `{min:30,max:120}` | Runtime budget per film |
 
-```bash
-ads-ai --url "https://acme.com/ergo-chair" --goal "Maximize ROAS" --output json > campaign.json
-```
-
-### Explicit product + audience
-
-```bash
-ads-ai --product "Standing Desk Mat" --audience "WFH Engineers" --goal "Drive Conversions"
-```
-
-### Programmatic pipeline
-
-```python
-import asyncio
-from ads_ai import Pipeline
-
-async def main():
-    pipeline = Pipeline.from_config("ads_ai.yaml")
-    result = await pipeline.run(
-        product="Ergonomic Chair",
-        audience="Remote Workers",
-        goal="Drive Conversions",
-    )
-    print(result.creative_variants)
-
-asyncio.run(main())
-```
-
----
-
-## Project Structure
-
-```
-ads-ai/
-├── ads_ai/                    # Main package
-│   ├── __init__.py            # Version and public API
-│   ├── config.py              # Settings from environment variables
-│   ├── main.py                # CLI entry point
-│   ├── pipeline.py            # OrchestratorPipeline
-│   ├── pipeline_stages.py     # Dynamic stage registry
-│   ├── agents/                # 19 specialized agents
-│   │   ├── base.py            # BaseAgent with LLM interface
-│   │   ├── models.py          # 40+ Pydantic models
-│   │   ├── strategy.py        # Strategy generation
-│   │   ├── creative.py        # Ad script generation
-│   │   ├── video.py           # Veo 3.1 integration
-│   │   └── ...                # Additional agents
-│   └── utils/                 # Shared utilities
-│       ├── file_ops.py        # Artifact management
-│       ├── prompts.py         # Prompt templates
-│       └── timing.py          # Performance instrumentation
-├── tests/                     # Test suite (126+ tests)
-├── docs/                      # Documentation
-│   ├── ARCHITECTURE.md        # System design
-│   ├── QUALITY_STANDARDS.md   # Agent quality expectations
-│   ├── getting-started.md     # Setup guide
-│   └── faq.md                 # Common questions
-├── .github/                   # GitHub configuration
-│   ├── workflows/ci.yml       # CI pipeline
-│   ├── dependabot.yml         # Dependency updates
-│   ├── ISSUE_TEMPLATE/        # Issue templates
-│   └── PULL_REQUEST_TEMPLATE.md
-├── pyproject.toml             # Project metadata and dependencies
-├── .env.example               # Environment variable template
-└── LICENSE                    # MIT License
-```
+All configuration is editable from the onboarding screen and persisted to a local
+SQLite DB (`./data/cinestudio.db`).
 
 ---
 
 ## Development
 
 ```bash
-pip install -e ".[dev,test,lint]"
-pytest tests/ -v --cov=ads_ai
-ruff check ads_ai/ tests/
-ruff format ads_ai/ tests/
-mypy ads_ai/ --ignore-missing-imports
+pnpm install
+pnpm dev          # http://localhost:3000
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # next lint
+pnpm test         # vitest run
+pnpm db:migrate   # apply schema to ./data/cinestudio.db
+pnpm db:reset     # wipe + re-apply
 ```
 
-### Running Tests
+### Project Structure
 
-```bash
-pytest tests/ -v --cov=ads_ai --cov-report=term-missing
-python3 tests/standalone_runner.py   # No API key required
+```
+cinestudio/
+├── app/                       # Next.js 16 App Router
+│   ├── (onboarding)/          # First-run provider setup
+│   ├── (dashboard)/           # Authenticated app shell
+│   │   ├── dashboard/         # Home (recent runs), New film, Run detail
+│   │   └── ...
+│   ├── api/                   # Route handlers (config, runs, SSE)
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx               # Routes to onboarding/dashboard
+├── components/
+│   ├── ui/                    # shadcn primitives
+│   ├── run-live-view.tsx      # SSE-driven run page
+│   └── theme-provider.tsx
+├── lib/                       # Cross-cutting utilities (cn(), formatters)
+├── src/                       # Server-only domain code
+│   ├── agents/                # 17 specialized agents
+│   ├── db/                    # SQLite (better-sqlite3) + migrations
+│   ├── graph/                 # Strands Graph + seed plugin
+│   ├── lib/                   # logger, id, json, promise, errors, artifacts
+│   ├── models/                # Zod schemas
+│   ├── orchestrator/          # Run pipeline driver
+│   ├── prompts/               # System prompts
+│   ├── providers/             # Model provider factory
+│   ├── stream/                # In-memory event bus + SSE sinks
+│   ├── types/                 # CinestudioConfig
+│   └── workflow/              # Render dispatch + agent-node factory
+├── tests/                     # Vitest specs
+├── public/
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+├── tailwind.config.ts
+├── components.json            # shadcn config
+├── vitest.config.ts
+└── .env.example
 ```
 
----
+### Adding a New Provider
 
-## Testing
+1. Add the type to `src/types/index.ts` (`TextProviderConfig.provider` enum).
+2. Add a build case to `src/providers/factory.ts`.
+3. (Optional) Add a default model preset to `app/(onboarding)/onboarding/setup/page.tsx`.
 
-```bash
-pytest tests/ -v
-pytest tests/ -v --cov=ads_ai --cov-report=term-missing
-```
+### Replacing the Stub Render Tool
 
----
-
-## Build
-
-```bash
-python -m build
-```
+`src/agents/render-dispatcher.ts` carries a stub `render_*` tool that throws. Wire in
+real provider calls (e.g. `@google/genai` for Veo, the OpenAI Sora API, the Runway
+HTTP client) inside `callback:` of each `tool({...})` call.
 
 ---
-
-## Release
-
-1. Bump version in `pyproject.toml`
-2. Update `CHANGELOG.md` with the new release notes
-3. Commit with a `version:X.Y.Z` message
-4. Tag the commit and push — GitHub Actions publishes to PyPI
-
----
-
-## Tech Stack
-
-| Category | Technology |
-|----------|------------|
-| Language | Python 3.10+ |
-| LLM Framework | Google GenAI (Gemini 3.1 Pro / Flash Lite) |
-| Video Generation | Google Veo 3.1 |
-| Data Validation | Pydantic v2 |
-| Settings | pydantic-settings |
-| Build System | Hatchling |
-| Linting | Ruff |
-| Type Checking | mypy |
-| Testing | pytest + pytest-cov |
-
----
-
-## Roadmap
-
-- [ ] Add support for additional video generation providers
-- [ ] Implement campaign performance analytics dashboard
-- [ ] Add multi-language support for ad generation
-- [ ] Create web UI for non-technical users
-- [ ] Add support for image ad generation
-- [ ] Implement A/B test result analysis agent
-- [ ] Add cost estimation and budget optimization
-- [ ] Support batch campaign generation
-
----
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
-- Fork and branch workflow
-- Commit conventions ([Conventional Commits](https://www.conventionalcommits.org/))
-- Pull request process
-- Coding standards and quality requirements
-
-## Code of Conduct
-
-This project follows the [Contributor Covenant v2.1](CODE_OF_CONDUCT.md).
-Please read it before participating.
-
-## Security
-
-For reporting vulnerabilities, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Sachin
+[MIT](LICENSE)

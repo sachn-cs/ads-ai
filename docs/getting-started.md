@@ -1,115 +1,69 @@
 # Getting Started
 
-This guide walks you through setting up and running your first ad generation pipeline.
-
-## Prerequisites
-
-- **Python 3.10+** — Check with `python3 --version`
-- **Google AI Studio API key** — Get one at [Google AI Studio](https://aistudio.google.com/apikey)
-
-## Installation
+## 1. Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/sachncs/ads-ai.git
-cd ads-ai
-
-# Install in editable mode
-pip install -e .
+git clone https://github.com/your-org/cinestudio.git
+cd cinestudio
+pnpm install
 ```
 
-For development with testing and linting tools:
+## 2. Apply the database schema
 
 ```bash
-pip install -e ".[dev,test,lint]"
+pnpm db:migrate
 ```
 
-## Configuration
+This creates `./data/cinestudio.db` (or whatever `CINESTUDIO_DATA_DIR` points to).
 
-1. Copy the example environment file:
+## 3. Start the dev server
 
 ```bash
-cp .env.example .env
+pnpm dev
 ```
 
-2. Edit `.env` and set your API key:
+Visit http://localhost:3000. You'll be redirected to the onboarding screen.
 
-```bash
-GEMINI_API_KEY=your_actual_api_key_here
-```
+## 4. Configure a text provider
 
-3. Optionally configure models and logging:
+Pick one of: Bedrock (default), Anthropic, OpenAI, Google Gemini, Ollama, or
+MiniMax. Enter the credentials. The form validates:
 
-```bash
-DEFAULT_TEXT_MODEL=gemini-3.1-pro-preview
-DEFAULT_EVALUATION_MODEL=gemini-3.1-flash-lite-preview
-DEFAULT_VIDEO_MODEL=veo-3.1-generate-preview
-LOG_LEVEL=INFO
-```
+- API key requirement (Bedrock and Ollama do not require keys if running locally)
+- Model identifier
+- Region (Bedrock only)
 
-## Running Your First Campaign
+Enable any of the render providers (Veo, Sora, Runway) you have access to. You can
+disable all of them and the platform will still produce the brief, script,
+storyboard, score plan, sound design, and color direction — you just won't get
+rendered videos.
 
-### URL Mode (Recommended)
+## 5. Start your first film
 
-Provide a product URL and let the pipeline extract context automatically:
+From the dashboard, click **New film**. Describe what you want — a logline, full
+treatment, or reference imagery. The Genres selector tags the brief so the
+Showrunner knows the target format.
 
-```bash
-ads-ai --url "https://example.com/product" --goal "Maximize Sales"
-```
+## 6. Watch it run
 
-### Explicit Mode
+The run detail page streams SSE events in real time. You'll see:
 
-Provide product and audience details directly:
+- A timeline of agents as they start and complete
+- An event log with timestamps
+- Per-agent JSON output (collapsible)
 
-```bash
-ads-ai \
-  --product "Ergonomic Standing Desk" \
-  --audience "Remote workers aged 25-40" \
-  --goal "Drive website conversions"
-```
+When the run finishes, you'll see the composite decision (GO / CONDITIONAL / NO-GO)
+and the total renders ok vs failed.
 
-### With Platform Targeting
+## 7. Inspect artifacts
 
-```bash
-ads-ai \
-  --url "https://example.com" \
-  --goal "Brand Awareness" \
-  --platforms TikTok Meta YouTube
-```
+Every run writes to `./artifacts/runs/<run-id>/`:
 
-### With Budget and Brand Assets
+- `prompt.txt` — your original input
+- `graph-result.json` — the final Strands Graph result
+- Plus a record per agent output in SQLite (`./data/cinestudio.db`)
 
-```bash
-ads-ai \
-  --url "https://example.com" \
-  --goal "Maximize Sales" \
-  --budget "$50,000" \
-  --brand-colors "Blue #0000FF, Gold #FFD700" \
-  --brand-images "Modern minimalist logo, product lifestyle shots"
-```
+## 8. Iterate
 
-## Output
-
-Each pipeline run generates artifacts in a timestamped directory:
-
-```
-outputs/
-  run_20240429_143052/
-    step_1_strategy.json
-    step_2_audience.json
-    step_3_creative_base.json
-    iteration_0_variants.json
-    iteration_1_variants.json
-    ...
-    step_7_adaptations.json
-    step_8_compliance.json
-    step_9_production.json
-    pipeline_final_report.json
-    ad_product_0_20240429_143052.mp4
-```
-
-## Next Steps
-
-- Read the [Architecture](ARCHITECTURE.md) document to understand how the pipeline works
-- Review [Quality Standards](QUALITY_STANDARDS.md) for agent-specific expectations
-- See the [FAQ](faq.md) for common questions
+Open the critic output for a shot, write a directive, and rerun — the platform will
+preserve your GO shots and re-render only the ones you flagged.

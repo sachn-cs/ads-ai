@@ -1,121 +1,77 @@
-# Frequently Asked Questions
+# FAQ
 
-## General
+## Why a Graph + custom Node instead of Swarm?
 
-### What is ads-ai?
+See [ARCHITECTURE.md](./ARCHITECTURE.md#why-graph-not-swarm). Short version: the
+pipeline is fundamentally sequential with one bounded cycle; Swarms are for emergent
+collaboration. We use a Graph because conditional edges make the iterate-vs-proceed
+branching explicit and deterministic.
 
-ads-ai is a production-grade, multi-agent AI framework for end-to-end advertising campaign generation. It extracts intelligence from product URLs, synthesizes strategic briefs, generates creative variants, evaluates them against quality thresholds, and produces video assets.
+## Why not use a first-class Workflow class?
 
-### How many agents are in the pipeline?
+The Strands TypeScript SDK exposes `Graph` and `Swarm` but no first-class Workflow.
+The Workflow pattern (parallel independent tasks) is implemented as code or a nested
+Graph. We chose a **custom Node** that fans out render calls using a bounded
+concurrency helper — this gives us per-provider `maxConcurrentShots` caps without
+shipping a graph-within-a-graph.
 
-The pipeline uses **19 specialized agents** covering strategy, audience modeling, creative generation, compliance validation, and video asset production.
+## How do I replace the stub render tools?
 
-### What models does it use?
+`src/agents/render-dispatcher.ts` carries a `render_veo`, `render_sora`, and
+`render_runway` tool whose callbacks throw "replace with real provider call". Wire
+in:
 
-- **Text reasoning**: Gemini 3.1 Pro (default)
-- **Evaluation**: Gemini 3.1 Flash Lite (default)
-- **Video generation**: Veo 3.1 (Google's video synthesis model)
+- Veo: `@google/genai` — `client.models.generate_videos(...)` with a length-poll loop
+- Sora: OpenAI's video API (when available)
+- Runway: their HTTP client
 
-All models can be configured via environment variables.
+Each `callback:` returns the provider's response wrapped in `ShotRenderResultSchema`.
 
-## Setup
+## Why are some agents duplicated by intent (e.g., character-designer and world-builder)?
 
-### Do I need a Google AI Studio API key?
+The brief-vs-cast vs brief-vs-world split lets you swap one without re-running the
+other. If you only want a color-grade change, you can patch the Colorist without
+re-running the World builder or the Continuity checker.
 
-Yes. The pipeline requires a `GEMINI_API_KEY` for both text generation and video synthesis. Get one at [Google AI Studio](https://aistudio.google.com/apikey).
+## How do I add a new agent?
 
-### What Python version is required?
+1. Add a Zod schema in `src/models/<area>.ts`.
+2. Add a system prompt in `src/prompts/system-prompts.ts`.
+3. Add a `src/agents/<agent-id>.ts` that exports an `AgentSpec` and an `invoke*()`.
+4. Add a node builder in `src/workflow/agent-nodes.ts`.
+5. Wire edges in `src/graph/cinestudio.ts`.
 
-Python 3.10 or higher. The project uses modern Python features like `X | None` union syntax.
+## How long does a typical run take?
 
-### Can I run this without an API key?
+For a 90-second film (4 scenes, ~12 shots), expect:
 
-No. All agents require the Gemini API for inference. However, you can run the test suite without an API key:
+- Showrunner + Script + Character + World + Storyboard + ShotPlanner: 1-3 min
+- Render (parallel, 12 shots): 2-15 min depending on provider and queue
+- Continuity + Critique + Scoring + Iteration: 30-90 s per cycle
+- Editor + Colorist + Composer + Sound + Voice + Distribution + Rights: 1-2 min
+- **Total: ~5-25 minutes for a first render**, less for subsequent iterations.
 
-```bash
-pip install -e ".[test]"
-pytest tests/ -v
-```
+## Why use SQLite instead of Postgres?
 
-## Usage
+cinestudio is a single-process, single-tenant app by default. SQLite gives us
+zero-config persistence and excellent concurrency under WAL. For multi-tenant or
+horizontally-scaled deployments, swap the layer in `src/db/client.ts` for a Postgres
+adapter — the schema is portable.
 
-### What input formats are supported?
+## Can I run the agents in parallel?
 
-1. **URL mode** — Provide a product landing page URL; the pipeline extracts product context automatically.
-2. **Explicit mode** — Provide `--product` and `--audience` descriptions directly.
+Yes — but with care. The current Graph has linear edges between agents. To add
+parallelism within a stage, you'd insert a `Swarm` of sub-agents as a node, or split
+the stage's `invoke()` into multiple `Promise.all([])` calls. The latter is easier
+and what we already do inside the Render Dispatch Node.
 
-### How long does a pipeline run take?
+## How is the iteration cycle bounded?
 
-Typical runs take 5-15 minutes depending on:
-- Number of creative variants (3-5 by default)
-- Iteration rounds (up to 3)
-- Video generation (the most time-consuming step)
+Three limits:
 
-### Can I customize the number of iterations?
+- `maxIterations` (CinestudioConfig)
+- The Critic + Scorer set `composite.recommendation` to `proceed` or `halt` early
+- The Graph's `maxSteps` (defaults to 100 in the cinestudio Graph config)
 
-The iteration loop (stages 4-6) runs up to `max_iterations` times (default: 3). This is configurable in the pipeline configuration.
-
-### What platforms are supported?
-
-The `PlatformAdaptationAgent` can adapt scripts for:
-- Meta (Facebook/Instagram)
-- TikTok
-- YouTube
-- Custom platforms via CLI flags
-
-## Output
-
-### Where are generated files saved?
-
-All artifacts are saved to `outputs/run_YYYYMMDD_HHMMSS/` relative to the working directory.
-
-### What file formats are produced?
-
-- **JSON**: Strategy briefs, audience segments, creative variants, evaluation reports
-- **MP4**: Final video advertisements (via Veo 3.1)
-
-### Can I customize the output directory?
-
-Yes, use the `--output-dir` flag:
-
-```bash
-ads-ai --url "https://example.com" --goal "Sales" --output-dir ./my-campaign
-```
-
-## Development
-
-### How do I run tests?
-
-```bash
-pip install -e ".[test]"
-pytest tests/ -v --cov=ads_ai --cov-report=term-missing
-```
-
-### How do I run linting?
-
-```bash
-pip install -e ".[lint]"
-ruff check ads_ai/ tests/
-mypy ads_ai/ tests/ --ignore-missing-imports
-```
-
-### How do I contribute?
-
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines on forking, branching, commit conventions, and the pull request process.
-
-## Troubleshooting
-
-### "GEMINI_API_KEY is not set"
-
-Ensure your `.env` file exists and contains a valid API key. The pipeline exits immediately without a key.
-
-### "Rate limit exceeded"
-
-Gemini API has rate limits. The pipeline includes automatic retry logic with exponential backoff. If the issue persists, check your API quota in Google AI Studio.
-
-### Video generation times out
-
-Video generation via Veo has a 300-second timeout. If your video isn't ready:
-1. Check your API quota
-2. Ensure the model name is correct (`veo-3.1-generate-preview`)
-3. Review the logs for specific error messages
+When any of these trips, the `iteration_controller` → `editor` edge fires and the
+rest of the pipeline runs.
