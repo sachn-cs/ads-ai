@@ -2,20 +2,14 @@ import { BedrockModel } from '@strands-agents/sdk/models/bedrock';
 import { AnthropicModel } from '@strands-agents/sdk/models/anthropic';
 import { GoogleModel } from '@strands-agents/sdk/models/google';
 import { OpenAIModel } from '@strands-agents/sdk/models/openai';
+import { VercelModel } from '@strands-agents/sdk/models/vercel';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModelV3, LanguageModelV4 } from '@ai-sdk/provider';
 import type { Model } from '@strands-agents/sdk';
 import type { TextProviderConfig } from '@/src/types';
 import { ProviderNotConfiguredError } from '@/src/lib/errors';
 
 export type AnyModel = Model;
-
-export class UnsupportedProviderError extends Error {
-  constructor(provider: string) {
-    super(
-      `Provider "${provider}" requires an external AI SDK adapter (e.g. @ai-sdk/openai-compatible for Ollama/MiniMax). Install the matching package and wire VercelModel({ provider: ... }) in src/providers/factory.ts.`,
-    );
-    this.name = 'UnsupportedProviderError';
-  }
-}
 
 export function buildModel(cfg: TextProviderConfig): AnyModel {
   if (!cfg.enabled) {
@@ -56,12 +50,27 @@ export function buildModel(cfg: TextProviderConfig): AnyModel {
       });
     case 'ollama':
     case 'minimax':
-      throw new UnsupportedProviderError(cfg.provider);
+      return new VercelModel({ provider: buildOpenAICompatibleProvider(cfg) });
     default: {
       const _exhaustive: never = cfg.provider;
       throw new Error(`Unknown provider: ${String(_exhaustive)}`);
     }
   }
+}
+
+function buildOpenAICompatibleProvider(cfg: TextProviderConfig): LanguageModelV3 {
+  const baseURL = cfg.baseUrl ?? (
+    cfg.provider === 'ollama'
+      ? process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1'
+      : process.env.MINIMAX_BASE_URL ?? 'https://api.minimax.chat/v1'
+  );
+  const compat = createOpenAICompatible({
+    name: cfg.provider,
+    baseURL,
+    apiKey: cfg.apiKey || 'no-key-required',
+  });
+  const model: LanguageModelV3 | LanguageModelV4 = compat(cfg.model);
+  return model as unknown as LanguageModelV3;
 }
 
 export function describeModel(cfg: TextProviderConfig): string {

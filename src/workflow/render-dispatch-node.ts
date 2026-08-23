@@ -96,7 +96,7 @@ export class RenderDispatchNode extends Node {
             agentId: 'render_dispatcher',
             payload: { shotId: instruction.shotId, provider: instruction.provider, index: idx },
           });
-          const result = await invokeRenderDispatcher(textCfg, renderProviders, instruction);
+          const result = await invokeRenderDispatcher(textCfg, renderProviders, instruction, runId);
           const status: 'render_completed' | 'render_failed' = result.status === 'completed' ? 'render_completed' : 'render_failed';
           emit({
             runId,

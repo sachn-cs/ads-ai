@@ -27,6 +27,8 @@
     "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^4.0.46",
+    "@ai-sdk/openai-compatible": "^3.0.35",
+    "@ai-sdk/provider": "^4.0.7",
     "@ai-sdk/react": "^1.0.0",
     "@anthropic-ai/sdk": "^0.120.0",
     "@google/genai": "^2.18.0",
