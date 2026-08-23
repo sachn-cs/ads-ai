@@ -7,7 +7,7 @@ import {
   type MultiAgentStreamEvent,
   type MultiAgentInput,
 } from '@strands-agents/sdk/multiagent';
-import { TextBlock } from '@strands-agents/sdk';
+import { TextBlock, type StateStore } from '@strands-agents/sdk';
 import type {
   ShotRenderInstruction,
   ShotRenderResult,
@@ -18,11 +18,28 @@ import { pAll } from '@/src/lib/promise';
 import type { TextProviderConfig, RenderProviderConfig } from '@/src/types';
 import { emit, emitAgentOutput } from '@/src/stream/sinks';
 import { logger } from '@/src/lib/logger';
-import { readApp, type AppState } from './app-state';
 
 const log = logger('workflow/render-dispatch-node');
 
 const NODE_ID = 'render_dispatch';
+
+function readTextProvider(app: StateStore): TextProviderConfig {
+  const v = app.get('textProvider') as TextProviderConfig | undefined;
+  if (!v) throw new Error('RenderDispatchNode requires textProvider in app state.');
+  return v;
+}
+
+function readRenderProviders(app: StateStore): Record<'veo' | 'sora' | 'runway', RenderProviderConfig> {
+  const v = app.get('renderProviders') as Record<'veo' | 'sora' | 'runway', RenderProviderConfig> | undefined;
+  if (!v) throw new Error('RenderDispatchNode requires renderProviders in app state.');
+  return v;
+}
+
+function readBatches(app: StateStore): RenderBatchPlan[] {
+  const v = app.get('shotBatches') as RenderBatchPlan[] | undefined;
+  if (!v) throw new Error('RenderDispatchNode requires shotBatches in app state. Run shot_planner first.');
+  return v;
+}
 
 export class RenderDispatchNode extends Node {
   handle: (
@@ -40,12 +57,13 @@ export class RenderDispatchNode extends Node {
       state: MultiAgentState,
     ): AsyncGenerator<MultiAgentStreamEvent, NodeResultUpdate, undefined> {
       void input;
-      const app = state.app as unknown as AppState;
-      const runId = readApp<string>(app, 'runId');
-      const textCfg = readApp<TextProviderConfig>(app, 'textProvider');
-      const renderProviders = readApp<Record<'veo' | 'sora' | 'runway', RenderProviderConfig>>(app, 'renderProviders');
-      const batches = readApp<RenderBatchPlan[]>(app, 'shotBatches');
-      const preserveShotIds = readApp<string[] | undefined>(app, 'preserveShotIds') ?? undefined;
+      try {
+      const app = state.app;
+      const runId = (app.get('runId') as string | undefined) ?? 'unknown-run';
+      const textCfg = readTextProvider(app);
+      const renderProviders = readRenderProviders(app);
+      const batches = readBatches(app);
+      const preserveShotIds = app.get('preserveShotIds') as string[] | undefined;
 
       const allInstructions: ShotRenderInstruction[] = batches.flatMap((b) => b.shots);
       emit({
@@ -102,7 +120,7 @@ export class RenderDispatchNode extends Node {
         }
       }, maxConcurrent);
 
-      (app as Record<string, unknown>).renderResults = completed;
+      app.set('renderResults', completed as unknown as Record<string, unknown>);
       const ok = completed.filter((r) => r.status === 'completed').length;
       const failed = completed.length - ok;
       const elapsed = Date.now() - started;
@@ -122,6 +140,10 @@ export class RenderDispatchNode extends Node {
         ],
         structuredOutput: { ok, failed, durationMs: elapsed } as unknown as Record<string, unknown>,
       };
+      } catch (err) {
+        log.error('render_dispatch_failed', { err: String(err), stack: err instanceof Error ? err.stack : undefined });
+        throw err;
+      }
     };
   }
 }

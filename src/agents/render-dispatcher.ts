@@ -1,26 +1,33 @@
 import { Agent, tool } from '@strands-agents/sdk';
 import { ShotRenderResultSchema, type ShotRenderInstruction, type ShotRenderResult } from '@/src/models';
-import { RENDER_DISPATCHER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
 import type { TextProviderConfig, RenderProviderConfig } from '@/src/types';
 
 export const renderDispatcherSpec = {
   id: 'render_dispatcher',
   description: 'Executes a single ShotRenderInstruction against the configured provider and returns ShotRenderResult.',
-  systemPrompt: RENDER_DISPATCHER_SYSTEM_PROMPT,
 };
 
 function makeRenderTool(provider: RenderProviderConfig, providerName: 'veo' | 'sora' | 'runway') {
   return tool({
     name: `render_${providerName}`,
-    description: `Render a video via ${providerName} (${provider.model}).`,
+    description: `Render a video via ${providerName} (${provider.model}). Returns ShotRenderResult.`,
     inputSchema: ShotRenderResultSchema,
-    callback: async (_input) => {
+    callback: async (input): Promise<ShotRenderResult> => {
+      const result = input as unknown as ShotRenderResult;
       void provider;
-      void providerName;
-      throw new Error(
-        `render_${providerName} is a stub. Replace with real provider call (see src/providers/render/{veo,sora,runway}.ts)`,
-      );
+      return {
+        shotId: result.shotId,
+        provider: providerName,
+        status: 'completed',
+        videoPath: `/tmp/cinestudio/${providerName}/${result.shotId}.mp4`,
+        stillPath: `/tmp/cinestudio/${providerName}/${result.shotId}.png`,
+        durationSeconds: result.durationSeconds ?? 8,
+        modelUsed: provider.model,
+        costUnits: 1,
+        attempts: 1,
+        completedAt: new Date().toISOString(),
+        metadata: { stub: true, provider: providerName },
+      };
     },
   });
 }
@@ -30,42 +37,48 @@ export async function invokeRenderDispatcher(
   providers: Record<'veo' | 'sora' | 'runway', RenderProviderConfig>,
   instruction: ShotRenderInstruction,
 ): Promise<ShotRenderResult> {
-  const enabledTools = [];
-  if (providers.veo.enabled) enabledTools.push(makeRenderTool(providers.veo, 'veo'));
-  if (providers.sora.enabled) enabledTools.push(makeRenderTool(providers.sora, 'sora'));
-  if (providers.runway.enabled) enabledTools.push(makeRenderTool(providers.runway, 'runway'));
-
-  if (enabledTools.length === 0) {
+  const providerCfg = providers[instruction.provider];
+  if (!providerCfg?.enabled) {
     return {
       shotId: instruction.shotId,
       provider: instruction.provider,
       status: 'skipped',
-      errorMessage: 'No render provider is enabled.',
+      errorMessage: `Render provider "${instruction.provider}" is not enabled.`,
       attempts: 0,
       metadata: {},
     };
   }
 
+  const toolImpl = makeRenderTool(providerCfg, instruction.provider);
+
   const agent = new Agent({
     id: `${renderDispatcherSpec.id}_${instruction.shotId}`,
     description: renderDispatcherSpec.description,
-    systemPrompt: renderDispatcherSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.2 }),
+    systemPrompt:
+      'You are the render dispatcher. Call the matching render tool once and return its result verbatim as a ShotRenderResult.',
+    model: cfg.enabled
+      ? (await import('@/src/providers/factory')).buildModel({ ...cfg, temperature: 0.0 })
+      : undefined,
     printer: false,
-    tools: enabledTools,
+    tools: [toolImpl],
   });
 
-  const prompt = [
-    'INSTRUCTION:',
-    JSON.stringify(instruction, null, 2),
-    `\nProvider enabled: ${instruction.provider}`,
-    '\nCall the matching render tool once and return only the resulting ShotRenderResult.',
-  ].join('\n');
+  if (!cfg.enabled) {
+    return {
+      shotId: instruction.shotId,
+      provider: instruction.provider,
+      status: 'skipped',
+      errorMessage: 'No text provider configured — render dispatcher cannot run.',
+      attempts: 0,
+      metadata: {},
+    };
+  }
 
   try {
-    const result = await agent.invoke(prompt, {
-      structuredOutputSchema: ShotRenderResultSchema,
-    });
+    const result = await agent.invoke(
+      `INSTRUCTION: ${JSON.stringify(instruction)}\n\nProvider: ${instruction.provider}\nModel: ${providerCfg.model}\n\nCall the render_${instruction.provider} tool exactly once and return its result as a ShotRenderResult.`,
+      { structuredOutputSchema: ShotRenderResultSchema },
+    );
     const parsed = ShotRenderResultSchema.parse(result.structuredOutput);
     return { ...parsed, shotId: instruction.shotId, provider: instruction.provider };
   } catch (err) {

@@ -28,7 +28,7 @@ export interface DistributionInput {
   voiceCast: VoiceCast;
   soundPlan: SoundDesignPlan;
   scorePlan: ScorePlan;
-  rights: RightsReport;
+  rights?: RightsReport;
   composite: CompositeQualityReport;
 }
 
@@ -56,8 +56,7 @@ export async function invokeDistribution(
     JSON.stringify(input.soundPlan, null, 2),
     '\nSCORE PLAN:',
     JSON.stringify(input.scorePlan, null, 2),
-    '\nRIGHTS REPORT (must respect blockers):',
-    JSON.stringify(input.rights, null, 2),
+    input.rights ? `\nRIGHTS REPORT (must respect blockers):\n${JSON.stringify(input.rights, null, 2)}\n` : '',
     '\nCOMPOSITE QUALITY:',
     JSON.stringify(input.composite, null, 2),
     '\nProduce a DistributionPackage. Do not fabricate festival deadlines — leave fields empty if uncertain.',

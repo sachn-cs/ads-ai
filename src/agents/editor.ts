@@ -21,7 +21,7 @@ export interface EditorInput {
   script: ScriptBreakdown;
   shots: ShotRenderResult[];
   storyboard: Storyboard;
-  scorePlan: ScorePlan;
+  scorePlan?: ScorePlan;
 }
 
 export async function invokeEditor(
@@ -42,8 +42,7 @@ export async function invokeEditor(
     JSON.stringify(input.shots, null, 2),
     '\nSTORYBOARD:',
     JSON.stringify(input.storyboard, null, 2),
-    '\nSCORE PLAN:',
-    JSON.stringify(input.scorePlan, null, 2),
+    input.scorePlan ? `\nSCORE PLAN:\n${JSON.stringify(input.scorePlan, null, 2)}\n` : '',
     '\nProduce an AssemblyPlan.',
   ].join('\n');
   const result = await agent.invoke(prompt, {

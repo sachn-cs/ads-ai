@@ -16,9 +16,8 @@ import type {
   RenderBatchPlan,
   CritiqueReport,
 } from '@/src/models';
-import type {
-  CinestudioConfig,
-} from '@/src/types';
+import type { CinestudioConfig } from '@/src/types';
+import type { StateStore } from '@strands-agents/sdk';
 import { AgentNode } from './agent-node';
 import {
   invokeShowrunner,
@@ -73,7 +72,18 @@ import {
   invokeRightsClearance,
 } from '@/src/agents/rights-clearance';
 import { IterationControlReportSchema } from '@/src/models';
-import { readApp } from './app-state';
+
+function read<T>(app: StateStore, key: string): T {
+  const v = app.get(key);
+  if (v === undefined || v === null) {
+    throw new Error(`Missing app state key "${key}" required for downstream agent.`);
+  }
+  return v as T;
+}
+
+function readOptional<T>(app: StateStore, key: string): T | undefined {
+  return app.get(key) as T | undefined;
+}
 
 export function buildAgentNodes(cfg: CinestudioConfig) {
   const t = cfg.textProvider;
@@ -82,7 +92,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     id: 'showrunner',
     description: 'Senior creative producer. Synthesizes the CinestudioBrief.',
     runId: '',
-    invoke: async (_state, app) => invokeShowrunner(t, readApp<string>(app, 'originalInput')),
+    invoke: async (_state, app) => invokeShowrunner(t, read<string>(app, 'originalInput')),
     persistKey: 'brief',
   });
 
@@ -92,9 +102,9 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeScriptWriter(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        previous: app.script,
-        iterationDirective: app.iterationDirective,
+        brief: read<CinestudioBrief>(app, 'brief'),
+        previous: readOptional<ScriptBreakdown>(app, 'script'),
+        iterationDirective: readOptional<string>(app, 'iterationDirective'),
       }),
     persistKey: 'script',
   });
@@ -105,8 +115,8 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeCharacterDesigner(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
       }),
     persistKey: 'cast',
   });
@@ -117,9 +127,9 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeWorldBuilder(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        cast: readApp<CharacterCast>(app, 'cast'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        cast: read<CharacterCast>(app, 'cast'),
       }),
     persistKey: 'world',
   });
@@ -130,11 +140,11 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeStoryboard(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        world: readApp<WorldDesign>(app, 'world'),
-        iterationDirective: app.iterationDirective,
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        cast: read<CharacterCast>(app, 'cast'),
+        world: read<WorldDesign>(app, 'world'),
+        iterationDirective: readOptional<string>(app, 'iterationDirective'),
       }),
     persistKey: 'storyboard',
   });
@@ -145,11 +155,11 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeShotPlanner(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        world: readApp<WorldDesign>(app, 'world'),
-        storyboard: readApp<Storyboard>(app, 'storyboard'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        cast: read<CharacterCast>(app, 'cast'),
+        world: read<WorldDesign>(app, 'world'),
+        storyboard: read<Storyboard>(app, 'storyboard'),
         providers: cfg.renderProviders,
       }),
     persistKey: 'shotBatches',
@@ -159,13 +169,15 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     id: 'continuity_checker',
     description: 'Continuity checker.',
     runId: '',
-    invoke: async (_state, app) =>
-      invokeContinuityChecker(t, {
-        shots: readApp<ShotRenderResult[]>(app, 'renderResults'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        world: readApp<WorldDesign>(app, 'world'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-      }),
+    invoke: async (_state, app) => {
+      const renderResults = read<ShotRenderResult[]>(app, 'renderResults');
+      return invokeContinuityChecker(t, {
+        shots: renderResults,
+        cast: read<CharacterCast>(app, 'cast'),
+        world: read<WorldDesign>(app, 'world'),
+        script: read<ScriptBreakdown>(app, 'script'),
+      });
+    },
     persistKey: 'continuityIssues',
   });
 
@@ -175,12 +187,12 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeCritique(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        world: readApp<WorldDesign>(app, 'world'),
-        shots: readApp<ShotRenderResult[]>(app, 'renderResults'),
-        continuityIssues: readApp<ContinuityIssue[]>(app, 'continuityIssues'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        cast: read<CharacterCast>(app, 'cast'),
+        world: read<WorldDesign>(app, 'world'),
+        shots: read<ShotRenderResult[]>(app, 'renderResults'),
+        continuityIssues: read<ContinuityIssue[]>(app, 'continuityIssues'),
       }),
     persistKey: 'critique',
   });
@@ -190,14 +202,14 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Composite scorer.',
     runId: '',
     invoke: async (_state, app) => {
-      const prev = app.composite as CompositeQualityReport | undefined;
+      const prev = readOptional<CompositeQualityReport>(app, 'composite');
       const cycleNumber = (prev?.cycleNumber ?? 0) + 1;
       const result = await invokeScoring(t, {
-        critique: readApp<CritiqueReport>(app, 'critique'),
+        critique: read<CritiqueReport>(app, 'critique'),
         cycleNumber,
         passingThreshold: cfg.defaults.qualityThreshold,
       });
-      (app as Record<string, unknown>).cycleNumber = cycleNumber;
+      app.set('cycleNumber', cycleNumber as unknown as Record<string, unknown>);
       return result;
     },
     persistKey: 'composite',
@@ -208,8 +220,8 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Iteration controller.',
     runId: '',
     invoke: async (_state, app) => {
-      const critique = readApp<CritiqueReport>(app, 'critique');
-      const composite = readApp<CompositeQualityReport>(app, 'composite');
+      const critique = read<CritiqueReport>(app, 'critique');
+      const composite = read<CompositeQualityReport>(app, 'composite');
       const result = await invokeIterationController(t, {
         critique,
         composite,
@@ -217,7 +229,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
         maxCycles: cfg.defaults.maxIterations,
       });
       const parsed = IterationControlReportSchema.safeParse(result);
-      (app as Record<string, unknown>).iterationReport = parsed.success ? parsed.data : result;
+      app.set('iterationReport', (parsed.success ? parsed.data : result) as unknown as Record<string, unknown>);
       return result;
     },
     persistKey: 'iterationReport',
@@ -229,10 +241,10 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeEditor(t, {
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        shots: readApp<ShotRenderResult[]>(app, 'renderResults'),
-        storyboard: readApp<Storyboard>(app, 'storyboard'),
-        scorePlan: readApp<ScorePlan>(app, 'scorePlan'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        shots: read<ShotRenderResult[]>(app, 'renderResults'),
+        storyboard: read<Storyboard>(app, 'storyboard'),
+        scorePlan: readOptional<ScorePlan>(app, 'scorePlan'),
       }),
     persistKey: 'assembly',
   });
@@ -243,9 +255,9 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeColorist(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        storyboard: readApp<Storyboard>(app, 'storyboard'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        storyboard: read<Storyboard>(app, 'storyboard'),
+        script: read<ScriptBreakdown>(app, 'script'),
       }),
     persistKey: 'color',
   });
@@ -256,9 +268,9 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeComposer(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        storyboard: readApp<Storyboard>(app, 'storyboard'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        storyboard: read<Storyboard>(app, 'storyboard'),
       }),
     persistKey: 'scorePlan',
   });
@@ -269,10 +281,10 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeSoundDesigner(t, {
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        world: readApp<WorldDesign>(app, 'world'),
-        scorePlan: readApp<ScorePlan>(app, 'scorePlan'),
-        storyboard: readApp<Storyboard>(app, 'storyboard'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        world: read<WorldDesign>(app, 'world'),
+        scorePlan: read<ScorePlan>(app, 'scorePlan'),
+        storyboard: read<Storyboard>(app, 'storyboard'),
       }),
     persistKey: 'soundPlan',
   });
@@ -283,10 +295,10 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeVoiceCasting(t, {
-        cast: readApp<CharacterCast>(app, 'cast'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        scorePlan: readApp<ScorePlan>(app, 'scorePlan'),
-        soundPlan: readApp<SoundDesignPlan>(app, 'soundPlan'),
+        cast: read<CharacterCast>(app, 'cast'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        scorePlan: read<ScorePlan>(app, 'scorePlan'),
+        soundPlan: read<SoundDesignPlan>(app, 'soundPlan'),
       }),
     persistKey: 'voiceCast',
   });
@@ -297,14 +309,14 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) =>
       invokeDistribution(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        assembly: readApp<AssemblyPlan>(app, 'assembly'),
-        voiceCast: readApp<VoiceCast>(app, 'voiceCast'),
-        soundPlan: readApp<SoundDesignPlan>(app, 'soundPlan'),
-        scorePlan: readApp<ScorePlan>(app, 'scorePlan'),
-        rights: readApp<RightsReport>(app, 'rightsReport'),
-        composite: readApp<CompositeQualityReport>(app, 'composite'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        cast: read<CharacterCast>(app, 'cast'),
+        assembly: read<AssemblyPlan>(app, 'assembly'),
+        voiceCast: read<VoiceCast>(app, 'voiceCast'),
+        soundPlan: read<SoundDesignPlan>(app, 'soundPlan'),
+        scorePlan: read<ScorePlan>(app, 'scorePlan'),
+        rights: readOptional<RightsReport>(app, 'rightsReport'),
+        composite: read<CompositeQualityReport>(app, 'composite'),
       }),
     persistKey: 'distribution',
   });
@@ -314,26 +326,26 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Rights clearance.',
     runId: '',
     invoke: async (_state, app) => {
-      const distribution = app.distribution as DistributionPackage | undefined;
+      const distribution = readOptional<DistributionPackage>(app, 'distribution');
       const placeholder: DistributionPackage = distribution ?? {
         id: 'placeholder',
         exports: [],
         metadata: {
-          title: readApp<CinestudioBrief>(app, 'brief').logline.slice(0, 80),
-          synopsis: readApp<CinestudioBrief>(app, 'brief').synopsis,
+          title: read<CinestudioBrief>(app, 'brief').logline.slice(0, 80),
+          synopsis: read<CinestudioBrief>(app, 'brief').synopsis,
           tags: [],
-          contentWarnings: readApp<CinestudioBrief>(app, 'brief').avoidances,
+          contentWarnings: read<CinestudioBrief>(app, 'brief').avoidances,
           credits: [],
         },
         festivalApplications: [],
       };
       return invokeRightsClearance(t, {
-        brief: readApp<CinestudioBrief>(app, 'brief'),
-        script: readApp<ScriptBreakdown>(app, 'script'),
-        cast: readApp<CharacterCast>(app, 'cast'),
-        world: readApp<WorldDesign>(app, 'world'),
+        brief: read<CinestudioBrief>(app, 'brief'),
+        script: read<ScriptBreakdown>(app, 'script'),
+        cast: read<CharacterCast>(app, 'cast'),
+        world: read<WorldDesign>(app, 'world'),
         distribution: placeholder,
-        continuityIssues: readApp<ContinuityIssue[]>(app, 'continuityIssues'),
+        continuityIssues: read<ContinuityIssue[]>(app, 'continuityIssues'),
       });
     },
     persistKey: 'rightsReport',
