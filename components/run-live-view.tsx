@@ -55,7 +55,7 @@ export function RunLiveView({ runId, initialStatus, initialDecision, initialEven
   );
   const [outputs, setOutputs] = useState<InitialOutput[]>(initialOutputs);
   const [status, setStatus] = useState<RunSummary['status']>(initialStatus);
-  const [decision, setDecision] = useState<RunLiveViewProps['initialDecision']>(initialDecision);
+  const decision = initialDecision;
   const sourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {

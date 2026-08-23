@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Film, Clapperboard, Sparkles, Workflow, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function OnboardingEntry() {
   return (

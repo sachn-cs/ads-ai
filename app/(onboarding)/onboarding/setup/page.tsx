@@ -78,10 +78,13 @@ export default function OnboardingSetup() {
   useEffect(() => {
     const preset = PROVIDER_PRESETS.find((p) => p.id === provider);
     if (preset) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setModel(preset.model);
       if (preset.defaultBaseUrl && !baseUrl) setBaseUrl(preset.defaultBaseUrl);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
-  }, [provider, baseUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider]);
 
   useEffect(() => {
     void fetch('/api/config')
