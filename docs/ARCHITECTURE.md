@@ -1,146 +1,193 @@
 # Architecture
 
-This document explains how cinestudio's orchestrator is structured — the agent roles,
-the Graph topology, the parallel render Workflow, the iteration cycle, and the
-runtime data plane.
-
-## High-level
-
-cinestudio is a Strands Agents TypeScript application. The Strands SDK
-(`@strands-agents/sdk`) gives us three multi-agent patterns:
-
-1. **Graph** — a deterministic DAG with conditional edges and cycle support.
-2. **Swarm** — agent-driven handoffs via structured output.
-3. **Workflow** — a task graph with parallel execution (in TS this is implemented
-   as code or a nested Graph; there is no first-class Workflow class).
-
-cinestudio uses **Graph** for the main pipeline (including the iteration cycle) and a
-**custom Node** that fans out render work in parallel — implementing the Workflow
-pattern over the Graph API.
-
-## The Agent Roster
-
-| ID | Agent | Role in Pipeline |
-|----|-------|------------------|
-| `showrunner` | CinestudioShowrunner | Synthesis of CinestudioBrief |
-| `script_writer` | Screenplay generation | ScriptBreakdown |
-| `character_designer` | Cast + character profiles | CharacterCast |
-| `world_builder` | Locations, palette, sound world | WorldDesign |
-| `storyboard` | Shot-by-shot coverage | Storyboard |
-| `shot_planner` | Provider-aware render instructions | RenderBatchPlan[] |
-| `render_dispatcher` (Node) | Parallel fan-out | ShotRenderResult[] |
-| `continuity_checker` | Cross-shot consistency audit | ContinuityIssue[] |
-| `critique` | Quality scoring (10 dimensions) | CritiqueReport |
-| `scoring` | Composite quality decision | CompositeQualityReport |
-| `iteration_controller` | Surgical-refinement directives | IterationControlReport |
-| `editor` | Edit decision list + pacing | AssemblyPlan |
-| `colorist` | LUT plan opening → climax → resolution | ColorGradeDirection |
-| `composer` | Score cue map + motif | ScorePlan |
-| `sound_designer` | Foley + ambient beds | SoundDesignPlan |
-| `voice_casting` | VO direction + dialogue coverage | VoiceCast |
-| `distribution` | Exports + festival apps | DistributionPackage |
-| `rights_clearance` | Likeness, IP, platform-policy gate | RightsReport |
-
-## The Graph
+## Cinematic spine (22 agents, 17 nodes in the Graph)
 
 ```
-                                                                                    ┌────────────────────────────┐
-                                                                                    │   iteration_controller     │
-                                                                                    │   (cycle back to render)   │
-                                                                                    └──────────────┬─────────────┘
-                                                                                                 │
-                                                                                                 ▼
-showrunner → script_writer → character_designer → world_builder → storyboard → shot_planner → render_dispatch (custom Node, parallel) →
-                                                                              continuity_checker → critique →
-                                                                              scoring → iteration_controller ─┐
-                                                                                                              │ proceed?
-                                                                                                              ▼
-                                                                                                       editor → colorist → composer →
-                                                                                                       sound_designer → voice_casting →
-                                                                                                       distribution → rights_clearance
+USER
+  ↓ POST /api/ideas/expand  (outside Graph)
+IdeaExpander produces 3 CinestudioBrief candidates
+  ↓ user picks via IdeaPicker
+  ↓ POST /api/runs {runId, brief}
+main pipeline (Strands Graph, linear):
+
+  showrunner       (CinestudioBrief)
+    ↓
+  style_guide      (StyleGuide)             ← NEW in v2
+    ↓
+  script_writer    (ScriptBreakdown)
+    ↓
+  character_designer (CharacterCast)        ← may produce portraits via MiniMax image
+    ↓
+  world_builder    (WorldDesign)
+    ↓
+  storyboard       (Storyboard)             ← may produce frames via MiniMax image
+    ↓
+  shot_planner     (RenderBatchPlan[])
+    ↓
+  render_dispatch  (custom Node, parallel fan-out)
+    ↓
+  continuity_checker / critique           (parallel branches)
+    ↓
+  scoring          (CompositeQualityReport)
+    ↓
+  editor → colorist → composer → sound_designer → voice_casting
+                                                       ← composer/sound/voice may
+                                                          produce audio via MiniMax
+    ↓
+  distribution → rights_clearance
+
+  (orchestrator-driven, outside the Graph)
+  iteration loop → reads composite, invokes iteration_controller,
+                   optionally re-renders, repeats up to maxIterations
+  marketing → reads assembly + voice + rights, produces MarketingAsset
 ```
 
-### Conditional Edges
+## The 4 new agents
 
-- `iteration_controller` → `render_dispatch` fires when the composite decision is
-  `iterate` and `iteration.shouldContinue` is true and `cycleNumber < maxIterations`.
-- `iteration_controller` → `editor` fires when the composite decision is `proceed`
-  or `iteration.shouldContinue` is false.
+| Agent | Position | What it does |
+|-------|----------|--------------|
+| **IdeaExpander** | entry, before showrunner | Calls MiniMax Anthropic API; produces 3 CinestudioBrief candidates with rationale + confidence. User picks via UI. |
+| **StyleGuide** | inline between showrunner and script_writer | Produces palette + lighting + lensing + grain + reference image hints + global constraints. fed to character_designer / world_builder / storyboard. |
+| **RenderDirector** | orchestrator-driven, not in linear spine | Reviews shot plans for cross-shot coherence (palette, eyeline, character refs), writes surgical RenderDirective patches. |
+| **Marketing** | terminal, after rights_clearance | Per-platform cutdowns, thumbnail concepts, press blurb, hashtags. |
 
-Both edges are guarded by `EdgeHandler` functions that read the Graph's StateStore.
+## The parallel render Workflow
 
-### Why Cycles
+`RenderDispatchNode` is a custom Strands Node. It reads `shotBatches` from `state.app`, fans out per-shot calls in parallel using `pAll`, bounded by each provider's `maxConcurrentShots`. On completion, writes `renderResults` back to `state.app`. Failures are caught per-shot (one failing shot doesn't kill the batch).
 
-The Critic + Scorer + IterationController form a bounded refinement loop. Each cycle
-re-renders only the failing shots (preserving GO shots) and may also revise the
-script / storyboard / shot-plans through the cycle's upstream nodes.
+Real provider SDKs:
+- **Veo** via `@google/genai` (GoogleGenAI client) — `models.generateVideos` + `operations.getVideosOperation` poll + `files.download`
+- **Sora** via `openai@7` SDK — `openai.videos.create` + `openai.videos.retrieve` poll + `openai.videos.downloadContent`
+- **Runway** via raw fetch to `https://api.dev.runwayml.com/v1/text_to_video` + `/v1/tasks/{id}` poll
+- **MiniMax-H3** via raw fetch to `https://api.minimax.io/v2/video_generation` + `/v2/query/video_generation/{id}` poll
 
-## The StateStore (Shared State)
+## Multimodal wiring
 
-Strands exposes a key-value `app` store on every `MultiAgentState`. The
-`CinestudioSeedPlugin` reads `invocationState` (passed to `graph.invoke`) and seeds
-the store with:
+All gated on `config.multimodal.{image|speech|music}.enabled` + `apiKey`. Falls back to text-only if disabled. Each pipeline that uses one of these writes artifacts to the `multimodal_assets` table:
 
-- `runId` — for tracing + persistence
-- `textProvider` — the CinestudioConfig's text-provider block
-- `renderProviders` — the CinestudioConfig's render-provider block
-- `originalInput` — the user's prompt
-- `cycleNumber` — current iteration cycle
+| Agent | Multimodal call |
+|-------|-----------------|
+| `character_designer` | `minimax.image` for one portrait per character → `kind='character_portrait'` |
+| `storyboard` | `minimax.image` for one frame per shot → `kind='storyboard_frame'` |
+| `composer` | `minimax.music` for one stem per `MusicCue` → `kind='score_stem'` |
+| `sound_designer` | `minimax.speech` for ambient beds + foley → `kind='foley'` |
+| `voice_casting` | `minimax.speech` for one sample line per character → `kind='voice_line'` |
 
-Each AgentNode reads its inputs from the store, invokes its LLM, and writes its
-output back into the store before emitting SSE events.
+The run page renders all of these via `<MultimodalGallery />` (grouped by kind).
 
-## The Parallel Render Workflow
+## StateStore contract
 
-The Strands TS SDK does not ship a first-class Workflow class. Instead we implement
-the Workflow pattern as a **custom Node**:
+The `StateStore` (`state.app`) is the per-invocation key-value store exposed by Strands. cinestudio's nodes use it to:
 
-```typescript
-class RenderDispatchNode extends Node<unknown, ShotRenderResult[]> {
-  // Reads shotBatches from state.app, fans out render calls in parallel,
-  // writes renderResults back. Concurrency is bounded per-provider via
-  // the pAll helper.
-}
+| Key | Written by | Read by |
+|-----|------------|---------|
+| `originalInput` | CinestudioSeedPlugin | showrunner, IdeaPicker |
+| `brief` | showrunner | all downstream agents |
+| `styleGuide` | style_guide | character_designer, world_builder, storyboard |
+| `script`, `cast`, `world`, `storyboard` | respective agents | subsequent agents |
+| `shotBatches` | shot_planner | render_dispatch (custom Node) |
+| `renderResults` | render_dispatch | continuity_checker, critique |
+| `composite`, `critique` | scoring, critique | editor |
+
+`runId` and `cycleNumber` are seeded by the plugin and incremented by `scoring`.
+
+## Strands capabilities
+
+### SessionManager + FileStorage
+
+```ts
+const sm = new SessionManager({
+  sessionId: runId,
+  storage: { snapshot: new FileStorage('./data/sessions') },
+  saveLatestOn: 'invocation',
+});
 ```
 
-The shot planner pre-computes `renderBatches[]` in the Storyboard — each batch shares
-a style tag, prompt prefix, and provider assignment. The render dispatcher then
-takes the union of all batches and dispatches each shot using the configured
-provider's `maxConcurrentShots` cap.
+Every `Agent` has `plugins: [sm]` so its conversation history is snapshotted to `./data/sessions/<runId>/.../snapshot_latest.json` after each invocation. On restart, an interrupted run can resume from its last completed node.
 
-## Persistence
+### contextManager: 'auto'
 
-Every event and every agent output is persisted to a SQLite database (better-sqlite3,
-WAL mode) before being broadcast on the SSE bus. This means:
+```ts
+new Agent({
+  contextManager: 'auto',
+  ...
+});
+```
 
-- A client disconnecting mid-run does not lose events; on reconnect it can replay
-  the event log with `?since=<last-id>`.
-- A run can be resumed (or inspected) from SQLite without re-running the agents.
+Composes `SummarizingConversationManager` (summary ratio 0.3, compression threshold 0.85) + `ContextOffloader` plugin (max 1,500 result tokens). Critical for the 22-agent pipeline — keeps long multi-turn agent histories within the model's context window.
 
-The event log shape (`RunEvent` in `src/models/run.ts`) is the union of:
+### DefaultModelRetryStrategy + ExponentialBackoff
 
-- `run_started`, `run_completed`, `run_failed`
-- `agent_started`, `agent_message`, `agent_completed`, `agent_failed`
-- `render_started`, `render_progress`, `render_completed`, `render_failed`
-- `iteration_started`, `iteration_completed`
-- `checkpoint_written`, `tool_called`
+```ts
+new Agent({
+  retryStrategy: new DefaultModelRetryStrategy({
+    maxAttempts: 6,
+    backoff: new ExponentialBackoff({ baseMs: 4_000, maxMs: 128_000, multiplier: 2, jitter: 'full' }),
+  }),
+});
+```
 
-## Why Graph, not Swarm?
+Retries on `ModelThrottledError` from text providers. Render providers have their own implicit polling backoff in their respective modules.
 
-We considered a Swarm for the iteration loop (Critic → Iteration → ShotPlanner
-handing off dynamically). We picked Graph because:
+### abortSignal
 
-1. The 17-agent pipeline is fundamentally sequential. Swarms are designed for
-   collaborative ideation, not deterministic orchestration.
-2. The conditional edges (iterate vs. proceed) are explicit, not emergent.
-3. Cycle bounds (`maxSteps`, `maxIterations`) are easier to enforce.
-4. We can show the user a precise agent timeline, not an emergent chat history.
+```ts
+await graph.invoke(prompt, { cancelSignal: abortController.signal });
+```
 
-## Next Steps
+Wired from the run page's "Cancel run" button. Strands composes `abortSignal` with its internal cancellation token, so all in-flight tool calls observe the signal cooperatively.
 
-- Replace the stub `render_*` tools with real provider SDKs (Veo via
-  `@google/genai`, Sora via OpenAI's video endpoint, Runway's HTTP API).
-- Add a Swarm-of-three for the iteration cycle itself — let the Critic, Iter, and
-  ShotPlanner hand off rather than executing strictly in sequence.
-- Add an interrupt / human-in-the-loop node before Rights Clearance for optional
-  manual sign-off.
+## SQLite schema (migrations)
+
+`pnpm db:migrate` runs idempotent migrations tracked in the `migrations` table. Schema:
+
+- `configs` — `CinestudioConfig` JSON singleton
+- `runs` — run metadata (status, prompt, brief_json, multimodal_assets counter, cycle_count, selected_variant_id, quality_*, timestamps)
+- `run_events` — append-only event log (SSE replay source)
+- `run_artifacts` — graph-result JSON
+- `agent_outputs` — per-agent snapshot with duration_ms
+- `idea_variants` — 3 CinestudioBrief candidates per run (idea-expander output)
+- `multimodal_assets` — image / audio / score-stem paths + metadata
+- `render_jobs` — per-shot provider task tracking (Veo op name, Sora video_id, Runway task_id, MiniMax task_id)
+- `migrations` — applied-migration tracker
+
+## SSE stream
+
+`GET /api/runs/[id]/stream`:
+
+1. Replays all events with id > `?since=N` (or all if unset).
+2. Sends a heartbeat `event: heartbeat\ndata: {since: ...}`.
+3. Subscribes to in-memory `RunBus`. When `runStatus` ∈ {completed, failed, cancelled}, closes the stream.
+4. Pings `: keepalive` every 15s.
+
+The run page mounts an `EventSource` against this URL and re-renders as events arrive. Stage status derivation in `<StageRail>` keys off `agent_completed` / `agent_failed` events.
+
+## Two-step new-film flow
+
+```
+/dashboard/new (compose)
+  user writes prompt + picks genre + variant count
+  → POST /api/ideas/expand
+      → runs IdeaExpander agent
+      → persists 3 IdeaVariants in idea_variants table
+      → returns {runId, result}
+  → sets phase='pick' in client state
+
+/dashboard/new (pick)
+  renders IdeaPicker with 3 cards
+  user clicks a card
+  → POST /api/ideas/select/[id]  {variantIndex}
+      → marks that variant as user_selected in idea_variants
+      → flips run.status to 'queued'
+  → POST /api/runs  {runId, brief}
+      → starts the orchestrator pipeline
+  → router.push(/dashboard/runs/[id])
+```
+
+## Out-of-scope (for v2)
+
+- Live cost-tracking dashboard (intentionally dropped — MiniMax key warning in onboarding only)
+- Real OAuth for MiniMax (we use API keys)
+- Multi-tenant user accounts
+- Stripe billing integration
+- Voice cloning UI (the API is wired in `upload.ts` but no UI yet)
