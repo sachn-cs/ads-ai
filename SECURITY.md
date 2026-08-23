@@ -4,12 +4,13 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2.0 | :x:                |
+| 0.1.x   | :white_check_mark: |
+| < 0.1.0 | :x:                |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within ads-ai, please send an email to **chakravarthy1393966@gmail.com**. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within cinestudio, please email
+**sachncs@gmail.com**. All security vulnerabilities will be promptly addressed.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
@@ -28,23 +29,17 @@ When reporting a vulnerability, please include:
 - **Initial assessment**: Within 1 week
 - **Resolution timeline**: Depends on severity, typically 1-4 weeks
 
-## Disclosure Policy
+### Cinestudio-Specific Notes
 
-- We will confirm receipt of your report within 48 hours.
-- We will provide an estimated timeline for a fix.
-- We will notify you when the vulnerability has been fixed.
-- We request that you do not publicly disclose the issue until we have had a chance to address it.
-
-## Security Best Practices
-
-When using ads-ai:
-
-- **API Keys**: Never commit `GEMINI_API_KEY` or any secrets to version control. Use environment variables or a `.env` file (which is gitignored).
-- **Dependencies**: Keep dependencies up to date. Run `pip install --upgrade` periodically.
-- **Network**: The pipeline makes outbound calls to Google's GenAI API. Ensure your network allows these connections.
-- **Output Files**: Generated artifacts (videos, JSON) are saved to `outputs/`. Restrict file permissions if deploying in shared environments.
-
-## Known Security Considerations
-
-- The pipeline executes LLM-generated content. While guardrails are in place, review generated outputs before publishing.
-- Video generation via Veo requires Google AI Studio API access with appropriate quotas.
+- cinestudio persists API keys in plain text in `./data/cinestudio.db`. For
+  production deployments, swap this for an encrypted secrets store and
+  inject keys via `process.env` only.
+- Rendered video artifacts in `./artifacts/runs/<id>/` may contain
+  third-party-IP-derived imagery. Use the `rights_clearance` agent's report
+  before publishing.
+- The Critic agent's `iteration_controller` runs in a loop with a
+  `maxIterations` cap. Default is 3 — review this cap if your prompt
+  budget allows more cycles.
+- The SSE stream `/api/runs/[id]/stream` does not implement per-user
+  authorization. Run the dashboard behind your auth layer (NextAuth,
+  Auth.js, Clerk, ...) before exposing publicly.

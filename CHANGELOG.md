@@ -5,79 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] — Unreleased
+
+### BREAKING — Full rewrite to TypeScript
+
+cinestudio is a complete TypeScript rewrite of the previously Python-only `ads-ai`
+package. There is **no migration path** — the Python package, CLI, and PyPI release
+have been removed. See the migration notes below.
 
 ### Added
-- SECURITY.md — security vulnerability reporting policy
-- .editorconfig — consistent editor formatting rules
-- .gitattributes — line ending normalization
-- .pre-commit-config.yaml — pre-commit hooks for linting and formatting
-- GitHub Actions release workflow for automated PyPI publishing
-- GitHub issue templates (bug report, feature request)
-- GitHub pull request template
-- GitHub Dependabot configuration for weekly dependency updates
-- Agent overview documentation (`ads_ai/agents/README.md`)
-- Getting started guide (`docs/getting-started.md`)
-- FAQ documentation (`docs/faq.md`)
-- `VIDEO_TIMEOUT_SECONDS` environment variable for configurable video generation timeout
 
-### Changed
-- Expanded .gitignore with comprehensive Python, IDE, and OS file coverage
-- Improved README with badges, project structure, tech stack table, roadmap, architecture diagram, and community links
-- Enhanced CONTRIBUTING.md with conventional commits, branch naming, and expanded quality requirements
-- Added [Unreleased] section to CHANGELOG
-- CI test matrix now runs across Python 3.10, 3.11, and 3.12
-- Added Python 3.13 classifier to pyproject.toml
+- **Next.js 16** web app (App Router, React 19, Server Actions)
+- **17-agent Strands Graph** orchestrated pipeline
+  - Showrunner, Script Writer, Character Designer, World Builder, Storyboard,
+    Shot Planner, Render Dispatcher, Continuity Checker, Critic, Iteration
+    Controller, Scorer, Editor, Colorist, Composer, Sound Designer, Voice Casting,
+    Distribution Planner, Rights Clearance
+- **Custom Node parallel render Workflow** — shots fan out concurrently across
+  enabled render providers at per-provider concurrency limits
+- **Multi-provider text LLM** — Bedrock (default), Anthropic, OpenAI, Google,
+  Ollama, MiniMax. Configured through the onboarding screen
+- **Multi-provider rendering** — Veo 3.1, Sora, Runway
+- **Onboarding flow** — single-screen provider setup with persistent SQLite config
+- **Dashboard** — recent runs list with status pills
+- **New-film form** — genre marker + freeform prompt
+- **Run detail page** — live SSE timeline + event log + per-agent JSON inspector
+- **SQLite persistence** — runs, configs, agent outputs, event log
+- **SSE event stream** — replays historical events on connect, then live updates
+- **18 Zod schemas** mirroring the old 40+ Pydantic models with new film-domain
+  shapes (CinestudioBrief, ScriptBreakdown, CharacterCast, WorldDesign, Storyboard,
+  ShotRenderInstruction, CritiqueReport, CompositeQualityReport, AssemblyPlan,
+  ColorGradeDirection, ScorePlan, SoundDesignPlan, VoiceCast, DistributionPackage,
+  RightsReport, ...)
+- **Vitest** spec coverage for models, config persistence, lib helpers, enum
+  invariants, Graph construction
 
-### Fixed
-- Corrected broken link to `ads_ai/agents/README.md` in main README
+### Removed
 
-## [0.2.0] - 2026-04-29
+- `ads_ai/` Python package (40+ files, ~4.7k LOC)
+- All pytest tests under `tests/test_*.py`
+- `pyproject.toml`
+- Python CI matrix
+- The `ads-ai` CLI binary
+- Pydantic v2 / Google GenAI runtime dependencies
 
-### Added
-- `PipelineStageRegistry`: Dynamic stage registry with declarative stage configurations,
-  dependency resolution, topological sorting, and parallel execution hints.
-- `StageConfig`: Configurable stages with dependencies, conditions, retry policies, and
-  per-stage timeout settings.
-- `PipelineStageRegistry.create_legacy()`: Class method factory for the existing 13-step
-  pipeline using the new dynamic stage system.
-- `RetryPolicy` model: Configurable retry with backoff, max attempts, and retryable
-  exception filtering.
-- `StageExecutionResult` and `StageStatus`: Structured output for pipeline execution.
-- `test_pipeline_stages.py`: Comprehensive test suite with 38 test cases for the new
-  pipeline stages module.
+### Migration notes (from ads-ai 0.2.0 → cinestudio 0.1.0)
 
-### Enhanced
-- All agent prompts now include chain-of-thought reasoning traces for systematic problem-solving.
-- Few-shot examples added to StrategyAgent, CreativeAgent, AudienceAgent, ScoringAgent,
-  IterationControllerAgent, and URLIntelligenceAgent.
-- Output validation checklists added to agent prompts to reduce malformed outputs.
-- Brand safety guardrails added to CreativeAgent prompts.
-- Contextual weighting logic added to ScoringAgent based on strategy goal type.
+| ads-ai (Python) | cinestudio (TypeScript) |
+|-----------------|--------------------------|
+| `Pipeline.run(prompt=..., audience=...)` | `POST /api/runs {prompt}` |
+| `ExtractedInputs` | `CinestudioBrief` |
+| `StrategyAgent` | `showrunner` |
+| `CreativeAgent` | `script_writer` |
+| `AudienceAgent` | `character_designer` |
+| (new) | `world_builder` |
+| `MessageClarityAgent` etc. | `critique` (10-dimension single agent) |
+| `ScoringAgent` | `scoring` |
+| `IterationControllerAgent` | `iteration_controller` |
+| `VideoGenerationAgent` | `render_dispatcher` (now in parallel Workflow) |
+| `ComplianceRiskAgent` | `rights_clearance` |
+| `DeploymentExperimentationAgent` | `distribution` |
+| Pydantic `BaseModel` | Zod `z.object(...)` + `z.infer<typeof X>` |
+| `gemini-3.1-pro-preview` model id | Configurable per provider |
+| `.env` | Onboarding screen + DB-backed config |
 
-### Changed
-- `OrchestratorPipeline` remains backward-compatible with existing code while the new
-  `PipelineStageRegistry` provides an alternative execution model.
-- `PipelineStageRegistry.create_legacy` is now a class method instead of standalone function.
-- All ruff linting issues fixed across the codebase.
-- Comprehensive test coverage raised to >90% (126 tests).
-- CI workflow triggers on `master` branch.
-
-### Fixed
-- `BaseAgent.generate()` overloads now use a generic `TypeVar` for precise return types.
-- `save_json()` protocol simplified to accept `Any`, resolving Pydantic v2 compatibility issues.
-- `capture_learnings()` and `design_validation()` signatures relaxed to accept `list[Any]`.
-
-## [0.1.1] - 2026-04-28
-
-### Fixed
-- Patch release with minor dependency updates.
-
-## [0.1.0] - 2026-04-04
+## [0.2.0] — 2026-07-14 (ads-ai)
 
 ### Added
-- Initial release of the ads-ai multi-agent advertising pipeline.
-- 19 specialized agents covering strategy, creative, evaluation, compliance, and video generation.
-- Veo 3.1 integration for cinematic video ad generation.
-- 13-step orchestrated pipeline with iterative quality gating.
-- Pydantic v2 models for strict schema validation across all agent outputs.
+- Multi-provider LLM support scaffolding
+- Dynamic `PipelineStageRegistry` with declarative configurations
+- `Veo 3.1` direct integration for video generation
+- Quantified quality enforcement via CompositeReadinessReport
+
+(Historical; this release was the last Python-only version of the project.)
