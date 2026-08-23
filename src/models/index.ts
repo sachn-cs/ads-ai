@@ -15,3 +15,7 @@ export * from './sound';
 export * from './distribution';
 export * from './compliance';
 export * from './run';
+export * from './idea';
+export * from './style';
+export * from './directives';
+export * from './marketing';
