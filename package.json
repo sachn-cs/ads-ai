@@ -24,7 +24,7 @@
     "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/anthropic": "^4.0.40",
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^4.0.46",
     "@ai-sdk/openai-compatible": "^3.0.35",
