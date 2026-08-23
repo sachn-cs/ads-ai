@@ -1,4 +1,6 @@
 import type { AgentId } from '@/src/agents';
+import { TextBlock as textBlock } from '@strands-agents/sdk';
+export { textBlock };
 import type {
   CinestudioBrief,
   CharacterCast,

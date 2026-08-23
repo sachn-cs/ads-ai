@@ -2,6 +2,7 @@ import { Agent } from '@strands-agents/sdk';
 import type { tool } from '@strands-agents/sdk';
 import type { TextProviderConfig } from '@/src/types';
 import { buildModel, describeModel } from '@/src/providers/factory';
+import { buildRetryStrategy, getSessionManager } from '@/src/workflow/strands';
 
 export interface AgentSpec {
   id: string;
@@ -30,13 +31,27 @@ const DEFAULT_TEMPERATURE_BY_INTENT: Record<string, number> = {
   distribution: 0.4,
 };
 
+interface AgentFactoryContext {
+  runId: string;
+}
+
+let currentContext: AgentFactoryContext | undefined;
+
+export function setAgentFactoryContext(runId: string): void {
+  currentContext = { runId };
+}
+
 export function makeAgent(spec: AgentSpec, cfg: TextProviderConfig, tools: ReturnType<typeof tool>[] = []): Agent {
+  const runId = currentContext?.runId ?? 'default-session';
   return new Agent({
     id: spec.id,
     description: spec.description,
     systemPrompt: spec.systemPrompt,
     model: buildModel(cfg),
     printer: false,
+    contextManager: 'auto',
+    retryStrategy: buildRetryStrategy(),
+    plugins: [getSessionManager(runId)],
     tools,
   });
 }

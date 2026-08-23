@@ -7,9 +7,9 @@ import {
   type MultiAgentInput,
 } from '@strands-agents/sdk/multiagent';
 import { TextBlock, type StateStore } from '@strands-agents/sdk';
-import type { AgentId } from '@/src/agents';
 import { emit, emitAgentOutput } from '@/src/stream/sinks';
 import { logger } from '@/src/lib/logger';
+import type { AgentId } from '@/src/agents';
 
 const log = logger('workflow/agent-node');
 

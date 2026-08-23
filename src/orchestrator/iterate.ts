@@ -18,6 +18,7 @@ const log = logger('orchestrator/iterate');
 interface IterateInput {
   runId: string;
   config: CinestudioConfig;
+  abortSignal?: AbortSignal;
 }
 
 interface IterationCycleResult {
