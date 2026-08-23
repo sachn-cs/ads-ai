@@ -114,10 +114,14 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Character designer.',
     runId: '',
     invoke: async (_state, app) =>
-      invokeCharacterDesigner(t, {
-        brief: read<CinestudioBrief>(app, 'brief'),
-        script: read<ScriptBreakdown>(app, 'script'),
-      }),
+      invokeCharacterDesigner(
+        cfg,
+        {
+          brief: read<CinestudioBrief>(app, 'brief'),
+          script: read<ScriptBreakdown>(app, 'script'),
+        },
+        app.get('runId') as string | undefined,
+      ),
     persistKey: 'cast',
   });
 
@@ -139,13 +143,17 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Storyboard.',
     runId: '',
     invoke: async (_state, app) =>
-      invokeStoryboard(t, {
-        brief: read<CinestudioBrief>(app, 'brief'),
-        script: read<ScriptBreakdown>(app, 'script'),
-        cast: read<CharacterCast>(app, 'cast'),
-        world: read<WorldDesign>(app, 'world'),
-        iterationDirective: readOptional<string>(app, 'iterationDirective'),
-      }),
+      invokeStoryboard(
+        cfg,
+        {
+          brief: read<CinestudioBrief>(app, 'brief'),
+          script: read<ScriptBreakdown>(app, 'script'),
+          cast: read<CharacterCast>(app, 'cast'),
+          world: read<WorldDesign>(app, 'world'),
+          iterationDirective: readOptional<string>(app, 'iterationDirective'),
+        },
+        app.get('runId') as string | undefined,
+      ),
     persistKey: 'storyboard',
   });
 
@@ -267,11 +275,15 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Composer.',
     runId: '',
     invoke: async (_state, app) =>
-      invokeComposer(t, {
-        brief: read<CinestudioBrief>(app, 'brief'),
-        script: read<ScriptBreakdown>(app, 'script'),
-        storyboard: read<Storyboard>(app, 'storyboard'),
-      }),
+      invokeComposer(
+        cfg,
+        {
+          brief: read<CinestudioBrief>(app, 'brief'),
+          script: read<ScriptBreakdown>(app, 'script'),
+          storyboard: read<Storyboard>(app, 'storyboard'),
+        },
+        app.get('runId') as string | undefined,
+      ),
     persistKey: 'scorePlan',
   });
 
@@ -280,12 +292,17 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Sound designer.',
     runId: '',
     invoke: async (_state, app) =>
-      invokeSoundDesigner(t, {
-        script: read<ScriptBreakdown>(app, 'script'),
-        world: read<WorldDesign>(app, 'world'),
-        scorePlan: read<ScorePlan>(app, 'scorePlan'),
-        storyboard: read<Storyboard>(app, 'storyboard'),
-      }),
+      invokeSoundDesigner(
+        cfg,
+        {
+          brief: read<CinestudioBrief>(app, 'brief'),
+          script: read<ScriptBreakdown>(app, 'script'),
+          world: read<WorldDesign>(app, 'world'),
+          scorePlan: read<ScorePlan>(app, 'scorePlan'),
+          storyboard: read<Storyboard>(app, 'storyboard'),
+        },
+        app.get('runId') as string | undefined,
+      ),
     persistKey: 'soundPlan',
   });
 
@@ -294,12 +311,16 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     description: 'Voice casting.',
     runId: '',
     invoke: async (_state, app) =>
-      invokeVoiceCasting(t, {
-        cast: read<CharacterCast>(app, 'cast'),
-        script: read<ScriptBreakdown>(app, 'script'),
-        scorePlan: read<ScorePlan>(app, 'scorePlan'),
-        soundPlan: read<SoundDesignPlan>(app, 'soundPlan'),
-      }),
+      invokeVoiceCasting(
+        cfg,
+        {
+          cast: read<CharacterCast>(app, 'cast'),
+          script: read<ScriptBreakdown>(app, 'script'),
+          scorePlan: read<ScorePlan>(app, 'scorePlan'),
+          soundPlan: read<SoundDesignPlan>(app, 'soundPlan'),
+        },
+        app.get('runId') as string | undefined,
+      ),
     persistKey: 'voiceCast',
   });
 

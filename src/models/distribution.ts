@@ -5,6 +5,7 @@ export const VoiceCastSchema = z.object({
   castingNotes: z.record(
     z.string(),
     z.object({
+      voiceId: z.string().describe('Resolved voice_id for TTS (e.g. "English_expressive_narrator").'),
       voiceTone: z.string(),
       directionHint: z.string(),
       referencePerformances: z.array(z.string()).optional(),
