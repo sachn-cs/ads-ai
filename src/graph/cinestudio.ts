@@ -8,12 +8,14 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
   const n = buildAgentNodes(config);
   const render = new RenderDispatchNode();
 
-  const invocationState: CinestudioInvocationState = { runId, config, userPrompt };
+  const _invocationState: CinestudioInvocationState = { runId, config, userPrompt };
+  void _invocationState;
 
-  const graph = new Graph({
+  return new Graph({
     nodes: [
       render,
       n.showrunner,
+      n.styleGuideNode,
       n.scriptWriter,
       n.characterDesigner,
       n.worldBuilder,
@@ -31,14 +33,16 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
       n.rightsNode,
     ],
     edges: [
-      [n.showrunner.id, n.scriptWriter.id],
+      [n.showrunner.id, n.styleGuideNode.id],
+      [n.styleGuideNode.id, n.scriptWriter.id],
       [n.scriptWriter.id, n.characterDesigner.id],
       [n.characterDesigner.id, n.worldBuilder.id],
       [n.worldBuilder.id, n.storyboardArtist.id],
       [n.storyboardArtist.id, n.shotPlanner.id],
       [n.shotPlanner.id, RENDER_DISPATCH_ID],
       [RENDER_DISPATCH_ID, n.continuityChecker.id],
-      [n.continuityChecker.id, n.critiqueNode.id],
+      [RENDER_DISPATCH_ID, n.critiqueNode.id],
+      [n.continuityChecker.id, n.scoringNode.id],
       [n.critiqueNode.id, n.scoringNode.id],
       [n.scoringNode.id, n.editorNode.id],
       [n.editorNode.id, n.coloristNode.id],
@@ -49,13 +53,10 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
       [n.distributionNode.id, n.rightsNode.id],
     ],
     sources: [n.showrunner.id],
-    maxSteps: 50,
+    maxSteps: 100,
     timeout: 60 * 60 * 1000,
     nodeTimeout: 10 * 60 * 1000,
     maxConcurrency: 4,
     plugins: [new CinestudioSeedPlugin()],
   });
-
-  void invocationState;
-  return graph;
 }

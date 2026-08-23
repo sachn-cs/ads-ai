@@ -15,6 +15,7 @@ import type {
   ShotRenderResult,
   RenderBatchPlan,
   CritiqueReport,
+  StyleGuide,
 } from '@/src/models';
 import type { CinestudioConfig } from '@/src/types';
 import type { StateStore } from '@strands-agents/sdk';
@@ -71,6 +72,9 @@ import {
 import {
   invokeRightsClearance,
 } from '@/src/agents/rights-clearance';
+import {
+  invokeStyleGuide,
+} from '@/src/agents/style-guide';
 import { IterationControlReportSchema } from '@/src/models';
 
 function read<T>(app: StateStore, key: string): T {
@@ -94,6 +98,15 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) => invokeShowrunner(t, read<string>(app, 'originalInput')),
     persistKey: 'brief',
+  });
+
+  const styleGuideNode = new AgentNode<StyleGuide>({
+    id: 'style_guide',
+    description: 'Style Guide.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeStyleGuide(t, read<CinestudioBrief>(app, 'brief')),
+    persistKey: 'styleGuide',
   });
 
   const scriptWriter = new AgentNode<ScriptBreakdown>({
@@ -390,5 +403,6 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     voiceNode,
     distributionNode,
     rightsNode,
+    styleGuideNode,
   };
 }

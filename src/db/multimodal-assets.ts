@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { ulid } from '@/src/lib/id';
 
 export interface MultimodalAssetRow {

@@ -166,6 +166,19 @@ vi.mock('@/src/agents/render-dispatcher', () => ({
   })),
 }));
 vi.mock('@/src/agents/continuity-checker', () => ({ invokeContinuityChecker: vi.fn(async () => MOCK_CONTINUITY) }));
+vi.mock('@/src/agents/style-guide', () => ({
+  invokeStyleGuide: vi.fn(async () => ({
+    id: 'sg-1',
+    title: 'Noir-Dawn',
+    cinematicReferences: ['Aftersun'],
+    palette: { primaryHues: ['#3b6e8f', '#a37c5b', '#0a0e12'], accentHues: [], mood: 'cold dawn resolving to warmth' },
+    lighting: { keyDirection: 'east', colorTemperature: 'cool', contrastMood: 'medium', shadows: 'soft blue' },
+    lensing: { preferredFocalLengthMm: [24, 35, 50, 85], apertureBias: 'medium', movementStyle: 'locked tripod with slow push-ins' },
+    grainAndTexture: { grainLevel: 'subtle', stockReference: 'Kodak Vision3 500T', lensCharacter: 'Panavision halation on highlights' },
+    referenceImageHints: ['cool dawn palette over weathered wood'],
+    globalConstraints: ['no daylight in act 1'],
+  })),
+}));
 vi.mock('@/src/agents/critique', () => ({ invokeCritique: vi.fn(async () => MOCK_CRITIQUE) }));
 vi.mock('@/src/agents/iteration-controller', () => ({ invokeIterationController: vi.fn(async () => MOCK_ITERATION) }));
 vi.mock('@/src/agents/scoring', () => ({ invokeScoring: vi.fn(async () => MOCK_COMPOSITE) }));
