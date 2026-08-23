@@ -206,6 +206,7 @@ const FAKE_CONFIG = {
     veo: { ...DEFAULT_CONFIG.renderProviders.veo, enabled: true, model: 'veo-3.1' },
     sora: { ...DEFAULT_CONFIG.renderProviders.sora, enabled: false },
     runway: { ...DEFAULT_CONFIG.renderProviders.runway, enabled: false },
+    minimax: { ...DEFAULT_CONFIG.renderProviders.minimax, enabled: false },
   },
 };
 
