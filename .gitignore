@@ -1,65 +1,18 @@
-# Run artifacts
-outputs/
-
-# Cache directories
-.benchmarks/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-*.egg
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.project
-.settings/
-
-# OS files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Environment files
+node_modules
+.next
+out
+build
+dist
+coverage
 .env
 .env.local
 .env.*.local
-
-# Logs
 *.log
-logs/
-
-# Coverage
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-
-# Jupyter
-.ipynb_checkpoints/
-
-# mypy
-.mypy_cache/
-
-# ruff
-.ruff_cache/
-
-# pytest
-.pytest_cache/
+.DS_Store
+.vscode
+.idea
+*.tsbuildinfo
+next-env.d.ts
+data/*.db
+data/*.db-journal
+artifacts/
