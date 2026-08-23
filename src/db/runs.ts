@@ -1,10 +1,14 @@
 import { ulid } from '@/src/lib/id';
 import { getDb } from './client';
-import type { RunStatusEnum, RunSummary } from '@/src/models';
+import type { z } from 'zod';
+import type { RunStatusEnum as RunStatusEnumType } from '@/src/models';
+import type { RunSummary } from '@/src/models';
+
+type RunStatus = z.infer<typeof RunStatusEnumType>;
 
 export interface RunRow {
   id: string;
-  status: RunStatusEnum;
+  status: RunStatus;
   prompt: string;
   title: string | null;
   brief_json: string | null;

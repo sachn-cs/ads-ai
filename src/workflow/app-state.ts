@@ -16,11 +16,6 @@ import type {
   RightsReport,
   ShotRenderResult,
   RenderBatchPlan,
-  CinestudioBrief as _Brief,
-  WorldDesign as _World,
-  SoundDesignPlan as _Sound,
-  ColorGradeDirection as _Color,
-  AssemblyPlan as _Assembly,
 } from '@/src/models';
 
 export interface AppState {
@@ -55,12 +50,6 @@ export interface AppState {
   distribution?: DistributionPackage;
   rightsReport?: RightsReport;
 }
-
-void _Brief;
-void _World;
-void _Sound;
-void _Color;
-void _Assembly;
 
 export type AppStateKey = keyof AppState;
 

@@ -13,8 +13,8 @@ import type {
   CharacterCast,
   WorldDesign,
   Storyboard,
-  RenderProviderConfig,
 } from '@/src/models';
+import type { RenderProviderConfig } from '@/src/types';
 
 export const shotPlannerSpec = {
   id: 'shot_planner',
@@ -23,13 +23,12 @@ export const shotPlannerSpec = {
   systemPrompt: SHOT_PLANNER_SYSTEM_PROMPT,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AvailableProvidersSchema = z.object({
   veo: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
   sora: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
   runway: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
-});
-
-export interface ShotPlannerInput {
+});export interface ShotPlannerInput {
   brief: CinestudioBrief;
   script: ScriptBreakdown;
   cast: CharacterCast;

@@ -1,5 +1,4 @@
 import { Agent, tool } from '@strands-agents/sdk';
-import { z } from 'zod';
 import { ShotRenderResultSchema, type ShotRenderInstruction, type ShotRenderResult } from '@/src/models';
 import { RENDER_DISPATCHER_SYSTEM_PROMPT } from '@/src/prompts';
 import { buildModel } from '@/src/providers/factory';

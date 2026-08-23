@@ -1,7 +1,11 @@
 import { getDb } from './client';
 import { ulid } from '@/src/lib/id';
 import type { AgentId } from '@/src/agents';
-import type { RunEvent, RunStatusEnum } from '@/src/models';
+import type { RunEvent } from '@/src/models';
+import type { z } from 'zod';
+import type { RunStatusEnum as RunStatusEnumType } from '@/src/models';
+
+type RunStatus = z.infer<typeof RunStatusEnumType>;
 
 export function recordAgentOutput(runId: string, agentId: AgentId, output: unknown, durationMs?: number): void {
   getDb()
@@ -60,7 +64,7 @@ export function newRunEvent(runId: string, type: RunEvent['type'], agentId?: str
   };
 }
 
-export function updateStatus(runId: string, status: RunStatusEnum): void {
+export function updateStatus(runId: string, status: RunStatus): void {
   getDb()
     .prepare('UPDATE runs SET status = ?, updated_at = ? WHERE id = ?')
     .run(status, new Date().toISOString(), runId);

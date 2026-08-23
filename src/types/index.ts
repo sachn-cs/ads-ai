@@ -35,7 +35,7 @@ export interface CinestudioConfig {
   updatedAt: string;
 }
 
-export const DEFAULT_CONFIG: Omit<CinestudioConfig, 'updatedAt'> = {
+export const DEFAULT_CONFIG: CinestudioConfig = {
   version: '0.1.0',
   textProvider: {
     enabled: false,
@@ -70,4 +70,5 @@ export const DEFAULT_CONFIG: Omit<CinestudioConfig, 'updatedAt'> = {
     enableVideoRender: true,
     enableAudioScore: false,
   },
+  updatedAt: new Date(0).toISOString(),
 };

@@ -1,4 +1,4 @@
-import { Graph, type EdgeHandler } from '@strands-agents/sdk';
+import { Graph, type EdgeHandler } from '@strands-agents/sdk/multiagent';
 import { CinestudioSeedPlugin, type CinestudioInvocationState } from './plugin';
 import { buildAgentNodes } from '@/src/workflow/agent-nodes';
 import { RenderDispatchNode, RENDER_DISPATCH_ID } from '@/src/workflow/render-dispatch-node';
@@ -34,7 +34,7 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
 
   const invocationState: CinestudioInvocationState = { runId, config, userPrompt };
 
-  const _graph = new Graph({
+  const graph = new Graph({
     nodes: [
       render,
       n.showrunner,
@@ -56,24 +56,24 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
       n.rightsNode,
     ],
     edges: [
-      [n.showrunner.id, n.scriptWriter.id],
-      [n.scriptWriter.id, n.characterDesigner.id],
-      [n.characterDesigner.id, n.worldBuilder.id],
-      [n.worldBuilder.id, n.storyboardArtist.id],
-      [n.storyboardArtist.id, n.shotPlanner.id],
-      [n.shotPlanner.id, RENDER_DISPATCH_ID],
-      [RENDER_DISPATCH_ID, n.continuityChecker.id],
-      [n.continuityChecker.id, n.critiqueNode.id],
-      [n.critiqueNode.id, n.scoringNode.id],
-      [n.scoringNode.id, n.iterationController.id],
-      [n.iterationController.id, RENDER_DISPATCH_ID, shouldIterate],
-      [n.iterationController.id, n.editorNode.id, proceedToEditor],
-      [n.editorNode.id, n.coloristNode.id],
-      [n.coloristNode.id, n.composerNode.id],
-      [n.composerNode.id, n.soundNode.id],
-      [n.soundNode.id, n.voiceNode.id],
-      [n.voiceNode.id, n.distributionNode.id],
-      [n.distributionNode.id, n.rightsNode.id],
+      { source: n.showrunner.id, target: n.scriptWriter.id },
+      { source: n.scriptWriter.id, target: n.characterDesigner.id },
+      { source: n.characterDesigner.id, target: n.worldBuilder.id },
+      { source: n.worldBuilder.id, target: n.storyboardArtist.id },
+      { source: n.storyboardArtist.id, target: n.shotPlanner.id },
+      { source: n.shotPlanner.id, target: RENDER_DISPATCH_ID },
+      { source: RENDER_DISPATCH_ID, target: n.continuityChecker.id },
+      { source: n.continuityChecker.id, target: n.critiqueNode.id },
+      { source: n.critiqueNode.id, target: n.scoringNode.id },
+      { source: n.scoringNode.id, target: n.iterationController.id },
+      { source: n.iterationController.id, target: RENDER_DISPATCH_ID, handler: shouldIterate },
+      { source: n.iterationController.id, target: n.editorNode.id, handler: proceedToEditor },
+      { source: n.editorNode.id, target: n.coloristNode.id },
+      { source: n.coloristNode.id, target: n.composerNode.id },
+      { source: n.composerNode.id, target: n.soundNode.id },
+      { source: n.soundNode.id, target: n.voiceNode.id },
+      { source: n.voiceNode.id, target: n.distributionNode.id },
+      { source: n.distributionNode.id, target: n.rightsNode.id },
     ],
     sources: [n.showrunner.id],
     maxSteps: 100,
@@ -84,5 +84,5 @@ export function buildCinestudioGraph(config: CinestudioConfig, userPrompt: strin
   });
 
   void invocationState;
-  return _graph;
+  return graph;
 }

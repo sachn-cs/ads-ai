@@ -2,12 +2,20 @@ import { BedrockModel } from '@strands-agents/sdk/models/bedrock';
 import { AnthropicModel } from '@strands-agents/sdk/models/anthropic';
 import { GoogleModel } from '@strands-agents/sdk/models/google';
 import { OpenAIModel } from '@strands-agents/sdk/models/openai';
-import { VercelModel } from '@strands-agents/sdk/models/vercel';
 import type { Model } from '@strands-agents/sdk';
 import type { TextProviderConfig } from '@/src/types';
 import { ProviderNotConfiguredError } from '@/src/lib/errors';
 
 export type AnyModel = Model;
+
+export class UnsupportedProviderError extends Error {
+  constructor(provider: string) {
+    super(
+      `Provider "${provider}" requires an external AI SDK adapter (e.g. @ai-sdk/openai-compatible for Ollama/MiniMax). Install the matching package and wire VercelModel({ provider: ... }) in src/providers/factory.ts.`,
+    );
+    this.name = 'UnsupportedProviderError';
+  }
+}
 
 export function buildModel(cfg: TextProviderConfig): AnyModel {
   if (!cfg.enabled) {
@@ -30,9 +38,14 @@ export function buildModel(cfg: TextProviderConfig): AnyModel {
       });
     case 'openai':
       return new OpenAIModel({
+        api: 'responses',
         modelId: cfg.model,
         apiKey: cfg.apiKey ?? process.env.OPENAI_API_KEY,
-        baseUrl: cfg.baseUrl,
+        clientConfig: cfg.baseUrl
+          ? {
+              baseURL: cfg.baseUrl,
+            }
+          : undefined,
         maxTokens: cfg.maxTokens,
       });
     case 'google':
@@ -43,12 +56,7 @@ export function buildModel(cfg: TextProviderConfig): AnyModel {
       });
     case 'ollama':
     case 'minimax':
-      return new VercelModel({
-        modelId: cfg.model,
-        apiKey: cfg.apiKey ?? 'noop',
-        baseUrl: cfg.baseUrl ?? process.env.MINIMAX_BASE_URL ?? process.env.OLLAMA_BASE_URL,
-        maxTokens: cfg.maxTokens,
-      });
+      throw new UnsupportedProviderError(cfg.provider);
     default: {
       const _exhaustive: never = cfg.provider;
       throw new Error(`Unknown provider: ${String(_exhaustive)}`);

@@ -1,22 +1,24 @@
 import type {
   CinestudioBrief,
-  CharacterCast,
-  CompositeQualityReport,
-  CritiqueReport,
   ScorePlan,
   ScriptBreakdown,
-  Storyboard,
+  SoundDesignPlan,
+  AssemblyPlan,
+  RightsReport,
+  CharacterCast,
+  VoiceCast,
+  DistributionPackage,
+  CompositeQualityReport,
   ColorGradeDirection,
   WorldDesign,
-  AssemblyPlan,
-  VoiceCast,
-  SoundDesignPlan,
-  DistributionPackage,
-  RenderBatchPlan,
-  RightsReport,
+  Storyboard,
   ShotRenderResult,
+  RenderBatchPlan,
+  CritiqueReport,
 } from '@/src/models';
-import type { CinestudioConfig } from '@/src/types';
+import type {
+  CinestudioConfig,
+} from '@/src/types';
 import { AgentNode } from './agent-node';
 import {
   invokeShowrunner,
@@ -67,14 +69,14 @@ import {
 import {
   invokeDistribution,
 } from '@/src/agents/distribution';
-import { invokeRightsClearance,
+import {
+  invokeRightsClearance,
 } from '@/src/agents/rights-clearance';
 import { IterationControlReportSchema } from '@/src/models';
 import { readApp } from './app-state';
 
 export function buildAgentNodes(cfg: CinestudioConfig) {
   const t = cfg.textProvider;
-
 
   const showrunner = new AgentNode<CinestudioBrief>({
     id: 'showrunner',
@@ -195,7 +197,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
         cycleNumber,
         passingThreshold: cfg.defaults.qualityThreshold,
       });
-      app.cycleNumber = cycleNumber;
+      (app as Record<string, unknown>).cycleNumber = cycleNumber;
       return result;
     },
     persistKey: 'composite',
@@ -215,7 +217,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
         maxCycles: cfg.defaults.maxIterations,
       });
       const parsed = IterationControlReportSchema.safeParse(result);
-      app.iterationReport = parsed.success ? parsed.data : result;
+      (app as Record<string, unknown>).iterationReport = parsed.success ? parsed.data : result;
       return result;
     },
     persistKey: 'iterationReport',

@@ -24,6 +24,7 @@ export function resolveRoots(cwd: string = process.cwd()): ArtifactRoots {
 }
 
 export function ensureDir(dir: string): string {
+  /* turbopackIgnore */
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }

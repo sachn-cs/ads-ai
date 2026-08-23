@@ -5,15 +5,14 @@ import { buildModel } from '@/src/providers/factory';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
-  CinestudioBrief as _Brief,
   CharacterCast,
   ScorePlan,
   SoundDesignPlan,
   VoiceCast,
   AssemblyPlan,
   RightsReport,
+  CompositeQualityReport,
 } from '@/src/models';
-import type { CompositeQualityReport } from '@/src/models';
 
 export const distributionSpec = {
   id: 'distribution',
@@ -23,7 +22,7 @@ export const distributionSpec = {
 };
 
 export interface DistributionInput {
-  brief: _Brief;
+  brief: CinestudioBrief;
   cast: CharacterCast;
   assembly: AssemblyPlan;
   voiceCast: VoiceCast;
@@ -68,5 +67,3 @@ export async function invokeDistribution(
   });
   return DistributionPackageSchema.parse(result.structuredOutput);
 }
-
-void CinestudioBrief as _Brief;

@@ -1,8 +1,8 @@
 import {
-  type MultiAgent,
   BeforeMultiAgentInvocationEvent,
+  type MultiAgent,
   type MultiAgentPlugin,
-} from '@strands-agents/sdk';
+} from '@strands-agents/sdk/multiagent';
 import type { CinestudioConfig } from '@/src/types';
 import { logger } from '@/src/lib/logger';
 

@@ -1,4 +1,5 @@
-import { Agent, tool } from '@strands-agents/sdk';
+import { Agent } from '@strands-agents/sdk';
+import type { tool } from '@strands-agents/sdk';
 import type { TextProviderConfig } from '@/src/types';
 import { buildModel, describeModel } from '@/src/providers/factory';
 

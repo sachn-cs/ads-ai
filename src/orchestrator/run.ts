@@ -26,7 +26,9 @@ export function startRun(input: StartRunInput): StartRunResult {
     throw new Error('Prompt must be at least 5 characters.');
   }
   const runId = createRun(input.prompt);
-  const artifactRoot = runDir(path.resolve(process.cwd(), process.env.CINESTUDIO_ARTIFACT_DIR ?? './artifacts'), runId);
+  const artifactDir = process.env.CINESTUDIO_ARTIFACT_DIR || './artifacts';
+  const cwd = process.cwd();
+  const artifactRoot = runDir(path.join(cwd, artifactDir), runId);
   writeJson(path.join(artifactRoot, 'prompt.txt'), input.prompt);
 
   const promise = (async () => {
