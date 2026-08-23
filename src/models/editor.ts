@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { CameraMoveEnum, ShotTypeEnum } from './common';
 
 export const EditDecisionSchema = z.object({
   shotId: z.string(),
