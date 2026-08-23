@@ -80,14 +80,10 @@ export async function POST(request: NextRequest) {
 
 // Lazy import to avoid circular dependency with orchestrator/run.
 function startExistingRun(runId: string): { runId: string; status: 'queued' } {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-  const { runCinestudioPipeline } = require('@/src/orchestrator/run-graph') as typeof import('@/src/orchestrator/run-graph');
-  void runCinestudioPipeline;
-  // Use the existing runId path through startRun; orchestrator will read
-  // brief_json from the DB.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { runCinestudioPipeline: rcp } = require('@/src/orchestrator/run-graph') as { runCinestudioPipeline: (i: { runId: string; prompt?: string; config: import('@/src/types').CinestudioConfig }) => Promise<unknown> };
-  void rcp;
+  // The orchestrator reads the run's brief_json from the DB and
+  // restarts the pipeline with the persisted context. Reuse startRun's
+  // path: it creates a new run if runId is unset, and resumes from
+  // the existing row when runId is provided (see run.ts).
   return startRun({ runIdForResume: runId } as never);
 }
 
@@ -95,3 +91,4 @@ interface CinestudioBriefShape {
   id?: string;
   logline?: string;
 }
+
