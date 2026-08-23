@@ -1,49 +1,49 @@
 <p align="center">
   <h1 align="center">cinestudio</h1>
-  <p align="center">Multi-agent AI film rendering platform — 30-second spots to 20-minute shorts, orchestrated by a Strands Graph with a parallel render Workflow.</p>
+  <p align="center">Multi-agent AI film rendering platform. 30-second spots to 20-minute shorts, coordinated by a 22-agent Strands Graph with multimodal (image / voice / music) generation through the MiniMax platform.</p>
   <p align="center">
     <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%E2%89%A526-blue" alt="Node"></a>
     <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16-black" alt="Next.js"></a>
-    <a href="https://github.com/strands-agents/harness-sdk"><img src="https://img.shields.io/badge/Strands-TS-purple" alt="Strands"></a>
+    <a href="https://strandsagents.com/"><img src="https://img.shields.io/badge/Strands-TS-purple" alt="Strands"></a>
+    <a href="https://platform.minimax.io/"><img src="https://img.shields.io/badge/MiniMax-orange" alt="MiniMax"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
   </p>
 </p>
 
-**cinestudio** is a production-grade, multi-agent film rendering web app. You give it a
-logline or treatment; 17 specialized agents coordinate through a deterministic Graph
-plus a parallel render Workflow to produce a 30-second-to-20-minute film — script,
-characters, world, storyboard, rendered shots, score, sound design, color, voice, and
-distribution package included.
+**cinestudio** is a production-grade, multi-agent AI film rendering platform. The pipeline
+runs a Strands Graph (deterministic DAG with optional cycle) of 22 specialized agents that take a
+raw creative prompt through:
 
-The architecture is a direct port of the Strands multi-agent patterns
-([docs](https://strandsagents.com/docs/user-guide/concepts/multi-agent/multi-agent-patterns/)):
-**Graph** for the spine, a custom **Workflow Node** for parallel shot rendering, and
-**conditional edges** that route between iterate / proceed based on the composite
-quality score.
+1. **Idea** — IdeaExpander produces 3 CinestudioBrief candidates; user picks one
+2. **Style** — StyleGuide constrains every visual agent
+3. **Script** — Scene breakdown, dialogue, voiceover
+4. **Characters** — Cast profiles + MiniMax-generated portraits (multimodal)
+5. **World** — Locations, palette, sound world
+6. **Storyboard** — Shot-by-shot coverage + MiniMax-generated reference frames
+7. **Production** — RenderDispatcher fans shots out to Veo / Sora / Runway / MiniMax-H3
+8. **Scoring** — Continuity + critique + composite quality
+9. **Post** — Editor, colorist, composer (score stems via MiniMax), sound, voice, distribution, rights
+
+Strands capabilities wired: SessionManager (FileStorage) for run
+state persistence, `contextManager: 'auto'` (SummarizingConversationManager + ContextOffloader),
+custom retry strategy (6 attempts, exponential 4-128s), AbortSignal for the Cancel button.
 
 ---
 
 ## Features
 
-- **17 specialized agents** coordinated by a Strands Graph — Showrunner, Script Writer,
-  Character Designer, World Builder, Storyboard, Shot Planner, Render Dispatcher,
-  Continuity Checker, Critic, Iteration Controller, Scorer, Editor, Colorist, Composer,
-  Sound Designer, Voice Casting, Rights Clearance, Distribution
-- **Parallel render Workflow** — shots are pre-batched by style tag and fanned out
-  concurrently across **Veo 3.1**, **Sora**, and **Runway** at per-provider
-  concurrency limits
-- **Multi-provider text LLM** — Amazon Bedrock (default), Anthropic, OpenAI,
-  Google Gemini, Ollama, or MiniMax. Configured through the onboarding screen
-- **Surgical iteration** — the Critic scores each shot across 10 dimensions; only
-  failing shots are re-rendered, preserving GO shots verbatim
-- **Live SSE updates** — the run detail page subscribes to a server-sent-event stream
-  and renders a per-agent timeline, event log, and JSON output inspector
-- **Quantified quality enforcement** — composite quality report drives GO / NO-GO /
-  CONDITIONAL decisions
-- **Cinestudio brief → Script → Storyboard → Render → Score → Compose → Distribute** —
-  full pipeline from idea to YouTube / Vimeo / festival export presets
-- **PLD-ready outputs** — distribution package with container/codec/resolution/aspect
-  specs, caption tracks, festival applications
+- **22 specialized agents** coordinated by a Strands Graph with custom Node for parallel render
+- **Multi-provider text LLM** — Bedrock (default), Anthropic, OpenAI, Google, Ollama, MiniMax
+- **Multi-provider video render** — Veo 3.1, Sora 2, Runway, **MiniMax-H3** (recommended)
+- **Multimodal MiniMax integration** — Image (image-01), Speech (speech-2.8-hd), Music (music-3.0), File Upload (voice clone + image refs). All driven by one MiniMax API key.
+- **IdeaExpander** — 3 CinestudioBrief candidates per user prompt with model confidence
+- **StyleGuide** — global visual bible (palette + lighting + lensing + grain)
+- **RenderDirector** agent + **Marketing** agent for cutdowns, thumbnails, press
+- **SSE streaming** — events for run_started, agent_started/completed/failed, render_*, run_*, plus heartbeat. Replays historical events on reconnect.
+- **Two-step new-film flow** — write prompt → pick variant from 3 candidates → pipeline starts
+- **Run page** with stage-by-stage rail, multimodal asset gallery, Cancel button
+- **CinestudioConfig persistence** in SQLite (WAL mode, foreign keys on)
+- **Migrations runner** — `migrations` table tracks applied migrations so re-running `pnpm db:migrate` is idempotent
 
 ---
 
@@ -57,153 +57,82 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Visit `http://localhost:3000` — the onboarding screen will ask you to choose a text
-provider. After saving, you land on the dashboard and can start a film.
+Visit `http://localhost:3000`. The onboarding screen will guide you through:
 
-### Prerequisites
+1. Choose **MiniMax** (recommended). One key covers text + video + image + speech + music.
+2. Set the MiniMax key, model (`MiniMax-M3`), and toggle which multimodals are on.
+3. Hit **Test connections** — the server pings each provider and shows latency / status.
+4. Hit **Save & continue** — routed to the dashboard.
 
-- **Node 26+** (see `package.json` — `engines.node >= 26.0.0`)
-- **pnpm 9+**
-- A **model provider** with API access (Bedrock, Anthropic, OpenAI, Gemini, Ollama,
-  or MiniMax)
-- A **render provider** if you want video output (Veo 3.1, Sora, or Runway). If you
-  have none, the platform still produces the brief / script / storyboard / color /
-  audio plan and you can render shots manually later.
+Create a film:
 
----
-
-## Architecture
-
-```mermaid
-graph TD
-  Showrunner -- brief --> ScriptWriter
-  ScriptWriter -- script --> CharacterDesigner
-  CharacterDesigner -- cast --> WorldBuilder
-  WorldBuilder -- world --> Storyboard
-  Storyboard -- storyboard --> ShotPlanner
-  ShotPlanner -- batches --> RenderDispatch
-  RenderDispatch -- renderResults --> Continuity
-  Continuity -- issues --> Critique
-  Critique -- critique --> Scoring
-  Scoring -- composite --> IterationController
-  IterationController -- continue? --> RenderDispatch
-  IterationController -- proceed --> Editor
-  Editor --> Colorist --> Composer --> Sound --> Voice --> Distribution --> RightsClearance
-```
-
-| # | Agent | Pattern Role | Output |
-|--:|-------|--------------|--------|
-| 0 | Showrunner | Graph entry | CinestudioBrief |
-| 1 | ScriptWriter | Graph | ScriptBreakdown |
-| 2 | CharacterDesigner | Graph | CharacterCast |
-| 3 | WorldBuilder | Graph | WorldDesign |
-| 4 | Storyboard | Graph | Storyboard (with render batches) |
-| 5 | ShotPlanner | Graph | RenderBatchPlan[] |
-| 6 | RenderDispatcher | **Custom Node** (parallel Workflow) | ShotRenderResult[] |
-| 7 | ContinuityChecker | Graph | ContinuityIssue[] |
-| 8 | Critic | Graph | CritiqueReport (10 dimensions) |
-| 9 | IterationController | Graph (cycle) | IterationControlReport |
-| 10 | Scorer | Graph | CompositeQualityReport |
-| 11 | Editor | Graph | AssemblyPlan |
-| 12 | Colorist | Graph | ColorGradeDirection |
-| 13 | Composer | Graph | ScorePlan |
-| 14 | SoundDesigner | Graph | SoundDesignPlan |
-| 15 | VoiceCasting | Graph | VoiceCast |
-| 16 | Distribution | Graph | DistributionPackage |
-| 17 | RightsClearance | Graph (terminal) | RightsReport |
-
-The **iteration cycle** (`Scoring -> IterationController -> RenderDispatcher`) is
-bounded by `defaults.maxIterations` and the composite's `recommendation`. When the
-Critic + Scorer decide all shots are GO, the cycle breaks and execution flows into
-the Editor -> Colorist -> ... -> RightsClearance spine.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the deep dive.
+1. Click **New film**, write your idea, pick genre.
+2. cinestudio's **IdeaExpander** generates 3 distinct CinestudioBrief candidates.
+3. Pick one. The pipeline starts: StyleGuide → Script → Characters → World → Storyboard → Production (parallel renders) → Scoring → Post.
+4. The run page shows a stage-by-stage rail, the multimodal artifact gallery, and a Cancel button.
 
 ---
 
 ## Configuration
 
+`CinestudioConfig` lives at `./data/cinestudio.db` (config row).
+
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `textProvider.provider` | `bedrock` | One of: bedrock / anthropic / openai / google / ollama / minimax |
-| `textProvider.model` | `global.anthropic.claude-sonnet-4-6` | Model identifier |
-| `renderProviders.veo.enabled` | `true` | Toggle Veo 3.1 |
-| `renderProviders.sora.enabled` | `false` | Toggle OpenAI Sora |
-| `renderProviders.runway.enabled` | `false` | Toggle Runway Gen-3 |
-| `defaults.maxIterations` | `3` | Critic iteration cycles |
-| `defaults.qualityThreshold` | `70` | Composite GO threshold |
-| `defaults.aspectRatio` | `16:9` | Default aspect for new runs |
-| `defaults.targetRuntimeSeconds` | `{min:30,max:120}` | Runtime budget per film |
-
-All configuration is editable from the onboarding screen and persisted to a local
-SQLite DB (`./data/cinestudio.db`).
+| `textProvider.provider` | `bedrock` | `bedrock` / `anthropic` / `openai` / `google` / `ollama` / `minimax` |
+| `textProvider.model` | `MiniMax-M3` | Model ID for the chosen text provider |
+| `renderProviders.minimax.enabled` | `true` | Enable MiniMax-H3 (recommended default) |
+| `renderProviders.{veo,sora,runway}.enabled` | `false` | Opt-in per-provider |
+| `multimodal.image.enabled` | `true` | MiniMax image-01 for character portraits + storyboard frames |
+| `multimodal.speech.enabled` | `true` | MiniMax speech-2.8-hd for TTS voice lines + foley |
+| `multimodal.music.enabled` | `true` | MiniMax music-3.0 for score stems |
+| `defaults.maxIterations` | `3` | Critic → iteration cycles |
+| `defaults.qualityThreshold` | `70` | Composite GO/NO-GO cut-off |
+| `defaults.ideaExpansionCount` | `3` | IdeaExpander candidates (1..5) |
 
 ---
 
-## Development
+## Tech Stack
 
-```bash
-pnpm install
-pnpm dev          # http://localhost:3000
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # next lint
-pnpm test         # vitest run
-pnpm db:migrate   # apply schema to ./data/cinestudio.db
-pnpm db:reset     # wipe + re-apply
+- **Strands Agents (TS SDK)** — multi-agent Graph, SessionManager, retry, context management
+- **MiniMax platform** — text, video (H3), image (image-01), speech (speech-2.8-hd), music (music-3.0)
+- **Next.js 16** App Router with Server Actions and Server-Sent Events
+- **Tailwind CSS** + **shadcn/ui** (new-york style, neutral base)
+- **TypeScript** strict mode (noUncheckedIndexedAccess)
+- **better-sqlite3** (WAL mode) — runs, configs, agent outputs, multimodal assets, idea variants, render jobs
+- **pnpm 9** / **Node 26**
+
+---
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full detail. Summary:
+
+- **Cinematic spine** — 17-node linear Graph + 4 orchestrator-driven side agents
+- **Workflow** — parallel fan-out Node for render_dispatch (bounded concurrency)
+- **Storage** — runs + configs in SQLite; agent outputs and multimodal artifacts persisted for replay
+- **Streaming** — SSE via in-memory event bus + DB persistence (replay on reconnect)
+
 ```
-
-### Project Structure
-
+USER prompt → [POST /api/ideas/expand]
+                ↓
+            3 IdeaVariants (DB persisted)
+                ↓
+            user picks via IdeaPicker
+                ↓
+            [POST /api/runs {runId, brief}]
+                ↓
+            Graph runs linearly:
+              showrunner → style_guide → script_writer → character_designer
+                       → world_builder → storyboard → shot_planner → render_dispatch
+                       → continuity_checker / critique → scoring → editor
+                       → colorist → composer → sound_designer → voice_casting
+                       → distribution → rights_clearance
+                ↓
+            orchestrator iteration loop (imperative)
+                ↓
+            final composite + assembly + rights + marketing assets
 ```
-cinestudio/
-├── app/                       # Next.js 16 App Router
-│   ├── (onboarding)/          # First-run provider setup
-│   ├── (dashboard)/           # Authenticated app shell
-│   │   ├── dashboard/         # Home (recent runs), New film, Run detail
-│   │   └── ...
-│   ├── api/                   # Route handlers (config, runs, SSE)
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx               # Routes to onboarding/dashboard
-├── components/
-│   ├── ui/                    # shadcn primitives
-│   ├── run-live-view.tsx      # SSE-driven run page
-│   └── theme-provider.tsx
-├── lib/                       # Cross-cutting utilities (cn(), formatters)
-├── src/                       # Server-only domain code
-│   ├── agents/                # 17 specialized agents
-│   ├── db/                    # SQLite (better-sqlite3) + migrations
-│   ├── graph/                 # Strands Graph + seed plugin
-│   ├── lib/                   # logger, id, json, promise, errors, artifacts
-│   ├── models/                # Zod schemas
-│   ├── orchestrator/          # Run pipeline driver
-│   ├── prompts/               # System prompts
-│   ├── providers/             # Model provider factory
-│   ├── stream/                # In-memory event bus + SSE sinks
-│   ├── types/                 # CinestudioConfig
-│   └── workflow/              # Render dispatch + agent-node factory
-├── tests/                     # Vitest specs
-├── public/
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-├── tailwind.config.ts
-├── components.json            # shadcn config
-├── vitest.config.ts
-└── .env.example
-```
-
-### Adding a New Provider
-
-1. Add the type to `src/types/index.ts` (`TextProviderConfig.provider` enum).
-2. Add a build case to `src/providers/factory.ts`.
-3. (Optional) Add a default model preset to `app/(onboarding)/onboarding/setup/page.tsx`.
-
-### Replacing the Stub Render Tool
-
-`src/agents/render-dispatcher.ts` carries a stub `render_*` tool that throws. Wire in
-real provider calls (e.g. `@google/genai` for Veo, the OpenAI Sora API, the Runway
-HTTP client) inside `callback:` of each `tool({...})` call.
 
 ---
 
