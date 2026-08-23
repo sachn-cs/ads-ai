@@ -1,11 +1,7 @@
-import { buildCinestudioGraph } from '@/src/graph/cinestudio';
+import { runCinestudioPipeline } from './run-graph';
 import { loadConfig } from '@/src/db/configs';
-import { createRun, updateRun } from '@/src/db/runs';
-import { updateStatus } from '@/src/db/events';
-import { emit } from '@/src/stream/sinks';
-import { runDir, writeJson } from '@/src/lib/artifacts';
-import path from 'node:path';
-import { safeJsonStringify } from '@/src/lib/json';
+import { createRun } from '@/src/db/runs';
+import { ProviderNotConfiguredError } from '@/src/lib/errors';
 import { logger } from '@/src/lib/logger';
 
 const log = logger('orchestrator/run');
@@ -19,55 +15,28 @@ export interface StartRunResult {
   status: 'queued';
 }
 
-const inflight = new Map<string, Promise<void>>();
+const inflight = new Map<string, Promise<unknown>>();
 
 export function startRun(input: StartRunInput): StartRunResult {
   if (!input.prompt || input.prompt.trim().length < 5) {
     throw new Error('Prompt must be at least 5 characters.');
   }
   const runId = createRun(input.prompt);
-  const artifactDir = process.env.CINESTUDIO_ARTIFACT_DIR || './artifacts';
-  const cwd = process.cwd();
-  const artifactRoot = runDir(path.join(cwd, artifactDir), runId);
-  writeJson(path.join(artifactRoot, 'prompt.txt'), input.prompt);
 
   const promise = (async () => {
     const config = loadConfig();
     if (!config.textProvider.enabled) {
-      emit({ runId, type: 'run_failed', payload: { err: 'Text provider not configured. Complete onboarding.' } });
-      updateStatus(runId, 'failed');
-      return;
+      throw new ProviderNotConfiguredError(config.textProvider.provider);
     }
-    emit({ runId, type: 'run_started', payload: { prompt: input.prompt.slice(0, 200), provider: config.textProvider.provider, model: config.textProvider.model, aspectRatio: config.defaults.aspectRatio } });
-    updateStatus(runId, 'running');
-    try {
-      const graph = buildCinestudioGraph(config, input.prompt, runId);
-      const result = await graph.invoke(input.prompt, {
-        invocationState: {
-          runId,
-          config,
-          userPrompt: input.prompt,
-        },
-      });
-      writeJson(path.join(artifactRoot, 'graph-result.json'), JSON.parse(safeJsonStringify(result)));
-      const summary = result.status === 'COMPLETED' ? 'completed' : 'failed';
-      updateRun(runId, {
-        status: summary === 'completed' ? 'completed' : 'failed',
-        quality_score: 0,
-        quality_decision: 'GO',
-        completed_at: new Date().toISOString(),
-      });
-      emit({ runId, type: summary === 'completed' ? 'run_completed' : 'run_failed', payload: { durationMs: result.duration, status: result.status } });
-    } catch (err) {
-      log.error('pipeline_failed', { runId, err: String(err) });
-      updateStatus(runId, 'failed');
-      emit({ runId, type: 'run_failed', payload: { err: String(err) } });
-    } finally {
-      inflight.delete(runId);
-    }
-  })();
+    log.info('run_started', { runId, promptLength: input.prompt.length });
+    const result = await runCinestudioPipeline({ runId, prompt: input.prompt, config });
+    log.info('run_finished', { runId, status: result.status });
+  })().catch((err) => {
+    log.error('run_crashed', { runId, err: String(err) });
+  });
 
   inflight.set(runId, promise);
+  void promise.finally(() => inflight.delete(runId));
   return { runId, status: 'queued' };
 }
 
@@ -75,6 +44,8 @@ export function isRunInflight(runId: string): boolean {
   return inflight.has(runId);
 }
 
-export async function awaitRun(runId: string): Promise<void> {
-  await inflight.get(runId);
+export async function awaitRun(runId: string): Promise<unknown> {
+  const p = inflight.get(runId);
+  if (!p) throw new Error(`Run ${runId} not found`);
+  return p;
 }
