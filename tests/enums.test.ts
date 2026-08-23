@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  QualityDecisionSchema,
   QualityDecisionEnum,
   ToneEnum,
   GenreEnum,
@@ -14,7 +13,6 @@ describe('quality decision enum parity', () => {
     expect(QualityDecisionEnum.options).not.toContain('NO-GO');
     expect(QualityDecisionEnum.options).toContain('GO');
     expect(QualityDecisionEnum.options).toContain('CONDITIONAL_GO');
-    void QualityDecisionSchema;
   });
 
   it('all tone values are lowercase', () => {

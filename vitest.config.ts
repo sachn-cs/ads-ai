@@ -38,5 +38,5 @@ export default defineConfig({
 });
 
 function dirname(url: string) {
-  return url.replace(/\\/g, '/').replace(/\/[^\/]*$/, '');
+  return url.replace(/\\/g, '/').replace(/\/[^/]*$/, '');
 }

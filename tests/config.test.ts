@@ -7,11 +7,11 @@ describe('CinestudioConfig persistence', () => {
   beforeEachSetup();
 
   it('round-trips a config write+read', () => {
-    const updated = {
+    const updated: typeof DEFAULT_CONFIG = {
       ...DEFAULT_CONFIG,
       textProvider: {
         ...DEFAULT_CONFIG.textProvider,
-        provider: 'openai' as const,
+        provider: 'openai',
         model: 'gpt-5',
       },
     };

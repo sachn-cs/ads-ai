@@ -8,7 +8,7 @@ describe('CinestudioBriefSchema', () => {
       logline: 'A teacher in a small coastal town receives a letter.',
       synopsis: 'A short piece about a teacher who receives a letter from a student she thought she lost — letter arrives in the final moment of a routine morning.',
       genre: 'narrative_short',
-      tone: ['intimate', 'wistful'],
+      tone: ['intimate', 'romantic'],
       targetRuntimeSeconds: 120,
       audience: {
         who: 'Adults 25-50 who love quiet character studies',
