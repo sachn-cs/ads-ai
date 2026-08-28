@@ -93,7 +93,7 @@ export async function invokeIdeaExpander(
       model: cfg.model,
       baseUrl: cfg.baseUrl,
       temperature: cfg.temperature ?? 0.7,
-      maxTokens: cfg.maxTokens ?? 16384,
+      maxTokens: cfg.maxTokens ?? 32768,
     },
     {
       system: IDEA_EXPANDER_SYSTEM_PROMPT,
