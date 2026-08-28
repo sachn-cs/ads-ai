@@ -29,7 +29,7 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
     label: 'MiniMax (recommended)',
     model: 'MiniMax-M3',
     needsApiKey: true,
-    defaultBaseUrl: 'https://api.minimax.io',
+    defaultBaseUrl: 'https://api.minimax.io/anthropic',
     hint: 'One MiniMax API key covers text, video (MiniMax-H3), image (image-01), speech (speech-2.8-hd), and music (music-3.0).',
   },
   {
