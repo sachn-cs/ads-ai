@@ -98,7 +98,7 @@ export async function invokeShowrunner(
       model: cfg.model,
       baseUrl: cfg.baseUrl,
       temperature: cfg.temperature ?? 0.85,
-      maxTokens: cfg.maxTokens ?? 8192,
+      maxTokens: cfg.maxTokens ?? 16384,
     },
     {
       system: SHOWRUNNER_SYSTEM_PROMPT,
