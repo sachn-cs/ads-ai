@@ -25,7 +25,7 @@ async function testOne(
   try {
     switch (p.provider) {
       case 'minimax': {
-        const url = resolveAndAssertSafe(p.baseUrl ?? 'https://api.minimax.io', { allowHttp });
+        const url = await resolveAndAssertSafe(p.baseUrl ?? 'https://api.minimax.io', { allowHttp });
         const base = url.toString().replace(/\/+$/, '');
         const r = await fetch(`${base}/v1/models`, {
           headers: { Authorization: `Bearer ${p.apiKey ?? ''}` },
@@ -50,7 +50,7 @@ async function testOne(
         return { provider: 'minimax', ok: true, latencyMs: Date.now() - start };
       }
       case 'ollama': {
-        const url = resolveAndAssertSafe(p.baseUrl ?? 'http://localhost:11434', { allowHttp: true });
+        const url = await resolveAndAssertSafe(p.baseUrl ?? 'http://localhost:11434', { allowHttp: true });
         const r = await fetch(`${url.toString().replace(/\/+$/, '')}/api/tags`);
         if (!r.ok) throw new Error(`Ollama returned ${r.status}`);
         return { provider: 'ollama', ok: true, latencyMs: Date.now() - start };
@@ -69,7 +69,7 @@ async function testOne(
           openai: 'https://api.openai.com',
           google: 'https://generativelanguage.googleapis.com',
         };
-        const url = resolveAndAssertSafe(p.baseUrl ?? defaultUrl[p.provider] ?? '', { allowHttp });
+        const url = await resolveAndAssertSafe(p.baseUrl ?? defaultUrl[p.provider] ?? '', { allowHttp });
         const r = await fetch(`${url.toString().replace(/\/+$/, '')}/v1/models`, {
           headers: { Authorization: `Bearer ${p.apiKey ?? ''}` },
         });
