@@ -24,6 +24,13 @@ function schemaToOpenApi(schema: z.ZodTypeAny): Record<string, unknown> {
   return z.toJSONSchema(schema, { target: 'openApi3' }) as Record<string, unknown>;
 }
 
+function isArrayLikeObject(v: unknown): v is Record<string, unknown> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const keys = Object.keys(v as Record<string, unknown>);
+  if (keys.length === 0) return false;
+  return keys.every((k) => /^\d+$/.test(k));
+}
+
 function coerceSchema(name: string, value: unknown): unknown {
   if (value === undefined || value === null) return value;
   if (typeof value === 'number') return value;
@@ -32,9 +39,13 @@ function coerceSchema(name: string, value: unknown): unknown {
     return value;
   }
   if (Array.isArray(value)) return value.map((v) => coerceSchema(name, v));
+  if (isArrayLikeObject(value)) {
+    const keys = Object.keys(value).sort((a, b) => Number(a) - Number(b));
+    return keys.map((k) => coerceSchema(`${name}[${k}]`, (value as Record<string, unknown>)[k]));
+  }
   if (typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = coerceSchema(`${name}.${k}`, v);
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = coerceSchema(`${name}.${k}`, v);
     return out;
   }
   return value;
