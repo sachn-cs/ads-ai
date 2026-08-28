@@ -1,7 +1,5 @@
 export * as ideaExpander from './idea-expander';
 export * as styleGuide from './style-guide';
-export * as renderDirector from './render-director';
-export * as marketing from './marketing';
 export * as showrunner from './showrunner';
 export * as scriptWriter from './script-writer';
 export * as characterDesigner from './character-designer';
@@ -31,7 +29,6 @@ export const AGENT_IDS = [
   'storyboard',
   'shot_planner',
   'render_dispatcher',
-  'render_director',
   'continuity_checker',
   'critique',
   'iteration_controller',
@@ -43,6 +40,5 @@ export const AGENT_IDS = [
   'voice_casting',
   'rights_clearance',
   'distribution',
-  'marketing',
 ] as const;
 export type AgentId = (typeof AGENT_IDS)[number];

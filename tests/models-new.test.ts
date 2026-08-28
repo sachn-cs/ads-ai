@@ -5,7 +5,6 @@ import {
 } from '@/src/models/idea';
 import { StyleGuideSchema } from '@/src/models/style';
 import { RenderDirectiveSchema } from '@/src/models/directives';
-import { MarketingAssetSchema } from '@/src/models/marketing';
 
 describe('new agent output schemas', () => {
   it('IdeaVariant validates', () => {
@@ -84,20 +83,4 @@ describe('new agent output schemas', () => {
     expect(r.shotPatches[0]?.lockedFields).toContain('provider');
   });
 
-  it('MarketingAsset validates cutdowns and thumbnails', () => {
-    const m = MarketingAssetSchema.parse({
-      id: 'm-1',
-      cutdowns: [
-        { artifactId: 'c1', platform: 'youtube', durationSeconds: 60, aspectRatio: '16:9', hookSeconds: 3, structureOutline: ['hook', 'build', 'payoff'], captions: ['Watch this'], cta: 'Like & subscribe' },
-      ],
-      thumbnails: [
-        { artifactId: 't1', platform: 'youtube', prompt: 'A teacher at a dock', headlineOverlay: 'The Letter', paletteHints: ['#000000'] },
-      ],
-      pressBlurb: 'A teacher receives a letter that changes everything.',
-      hashtags: ['#cinestudio', '#film'],
-      generatedAt: new Date().toISOString(),
-    });
-    expect(m.cutdowns).toHaveLength(1);
-    expect(m.thumbnails).toHaveLength(1);
   });
-});
