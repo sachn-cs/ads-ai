@@ -1,7 +1,5 @@
 import path from 'node:path';
-import { mkdir, stat } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
-import { pipeline } from 'node:stream/promises';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { logger } from '@/src/lib/logger';
 import { authHeaders, miniMaxFetch, MiniMaxError, readNumberField, readStringField } from './shared';
 
@@ -77,8 +75,7 @@ export async function saveMiniMaxMusic(
   await mkdir(dir, { recursive: true });
   const outPath = path.join(dir, `${artifactId}.mp3`);
   const buffer = Buffer.from(hexAudio, 'hex');
-  await pipeline(buffer as unknown as NodeJS.ReadableStream, createWriteStream(outPath));
-  void pipeline;
+  await writeFile(outPath, buffer);
   const st = await stat(outPath);
   return { path: outPath, bytes: st.size };
 }
