@@ -149,9 +149,17 @@ export async function invokeStructuredAgent<T>(
       parsed = opts.schema.parse(coerce(obj, enums, [])) as T;
     }
   } else {
-    log.warn('agent_no_tooluse_fallback_regex', { agentId: opts.agentId });
+    log.warn('agent_no_tooluse_fallback_regex', { agentId: opts.agentId, textPreview: result.text.slice(0, 500) });
     const m = result.text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error(`${opts.agentId} produced unparseable output`);
+    if (!m) {
+      log.error('agent_no_json_in_text', {
+        agentId: opts.agentId,
+        textLength: result.text.length,
+        textPreview: result.text.slice(0, 800),
+        contentTypes: raw.content?.map((b) => b.type).join(','),
+      });
+      throw new Error(`${opts.agentId} produced unparseable output`);
+    }
     const obj = JSON.parse(m[0]);
     parsed = opts.schema.parse(coerce(obj, enums, [])) as T;
   }
