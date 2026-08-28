@@ -48,8 +48,14 @@ export function buildModel(cfg: TextProviderConfig): AnyModel {
         apiKey: cfg.apiKey ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
         maxTokens: cfg.maxTokens,
       });
-    case 'ollama':
     case 'minimax':
+      return new AnthropicModel({
+        modelId: cfg.model,
+        apiKey: cfg.apiKey,
+        clientConfig: cfg.baseUrl ? { baseURL: cfg.baseUrl } : undefined,
+        maxTokens: cfg.maxTokens,
+      });
+    case 'ollama':
       return new VercelModel({ provider: buildOpenAICompatibleProvider(cfg) });
     default: {
       const _exhaustive: never = cfg.provider;
