@@ -1,7 +1,5 @@
 import path from 'node:path';
 import {
-  Agent,
-  type Model,
   SessionManager,
   FileStorage,
   DefaultModelRetryStrategy,
@@ -51,34 +49,5 @@ export function buildRetryStrategy() {
       multiplier: 2,
       jitter: 'full',
     }),
-  });
-}
-
-/**
- * Build an Agent instance with:
- *  - SessionManager as a plugin (state persisted to ./data/sessions)
- *  - contextManager: 'auto' (composes SummarizingConversationManager
- *    + ContextOffloader; critical for the long 17-agent pipeline)
- *  - retryStrategy (handles 429 / 503 from text providers)
- */
-export function createCinestudioAgent(opts: {
-  id: string;
-  description: string;
-  systemPrompt: string;
-  model: Model;
-  tools?: unknown[];
-  runId: string;
-}): Agent {
-  log.info('agent_created', { id: opts.id, runId: opts.runId });
-  return new Agent({
-    id: opts.id,
-    description: opts.description,
-    systemPrompt: opts.systemPrompt,
-    model: opts.model,
-    printer: false,
-    contextManager: 'auto',
-    retryStrategy: buildRetryStrategy(),
-    plugins: [getSessionManager(opts.runId)],
-    tools: (opts.tools ?? []) as never[],
   });
 }
