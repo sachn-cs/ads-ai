@@ -66,7 +66,7 @@ export async function invokeStructuredAgent<T>(
       model: opts.cfg.model,
       baseUrl: opts.cfg.baseUrl,
       temperature: opts.temperature ?? opts.cfg.temperature ?? 0.7,
-      maxTokens: opts.cfg.maxTokens ?? 8192,
+      maxTokens: opts.cfg.maxTokens ?? 16384,
     },
     {
       system: opts.systemPrompt,
