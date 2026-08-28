@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { AssemblyPlanSchema, type AssemblyPlan } from '@/src/models';
 import { EDITOR_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   ScriptBreakdown,
@@ -28,13 +27,6 @@ export async function invokeEditor(
   cfg: TextProviderConfig,
   input: EditorInput,
 ): Promise<AssemblyPlan> {
-  const agent = new Agent({
-    id: editorSpec.id,
-    description: editorSpec.description,
-    systemPrompt: editorSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.4 }),
-    printer: false,
-  });
   const prompt = [
     'SCRIPT BREAKDOWN:',
     JSON.stringify(input.script, null, 2),
@@ -45,8 +37,13 @@ export async function invokeEditor(
     input.scorePlan ? `\nSCORE PLAN:\n${JSON.stringify(input.scorePlan, null, 2)}\n` : '',
     '\nProduce an AssemblyPlan.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: AssemblyPlanSchema,
+  const { output } = await invokeStructuredAgent<AssemblyPlan>({
+    agentId: 'editor',
+    cfg: { ...cfg, temperature: 0.4 },
+    systemPrompt: EDITOR_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: AssemblyPlanSchema,
+    temperature: 0.4,
   });
-  return AssemblyPlanSchema.parse(result.structuredOutput);
+  return output;
 }

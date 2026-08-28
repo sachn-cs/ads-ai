@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { ColorGradeDirectionSchema, type ColorGradeDirection } from '@/src/models';
 import { COLORIST_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
@@ -28,13 +27,6 @@ export async function invokeColorist(
   cfg: TextProviderConfig,
   input: ColoristInput,
 ): Promise<ColorGradeDirection> {
-  const agent = new Agent({
-    id: coloristSpec.id,
-    description: coloristSpec.description,
-    systemPrompt: coloristSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.6 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -45,8 +37,13 @@ export async function invokeColorist(
     input.composite ? `\nCOMPOSITE QUALITY REPORT:\n${JSON.stringify(input.composite, null, 2)}\n` : '',
     '\nProduce a ColorGradeDirection.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: ColorGradeDirectionSchema,
+  const { output } = await invokeStructuredAgent<ColorGradeDirection>({
+    agentId: 'colorist',
+    cfg: { ...cfg, temperature: 0.6 },
+    systemPrompt: COLORIST_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: ColorGradeDirectionSchema,
+    temperature: 0.6,
   });
-  return ColorGradeDirectionSchema.parse(result.structuredOutput);
+  return output;
 }

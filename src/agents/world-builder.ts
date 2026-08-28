@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { WorldDesignSchema, type WorldDesign } from '@/src/models';
 import { WORLD_BUILDER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type { CinestudioBrief, ScriptBreakdown, CharacterCast } from '@/src/models';
 
@@ -23,13 +22,6 @@ export async function invokeWorldBuilder(
   cfg: TextProviderConfig,
   input: WorldBuilderInput,
 ): Promise<WorldDesign> {
-  const agent = new Agent({
-    id: worldBuilderSpec.id,
-    description: worldBuilderSpec.description,
-    systemPrompt: worldBuilderSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.7 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -40,8 +32,13 @@ export async function invokeWorldBuilder(
     input.previous ? `\nPREVIOUS WORLD (continuity):\n${JSON.stringify(input.previous, null, 2)}\n` : '',
     '\nProduce a WorldDesign with consistent palette + recurring motifs.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: WorldDesignSchema,
+  const { output } = await invokeStructuredAgent<WorldDesign>({
+    agentId: 'world_builder',
+    cfg: { ...cfg, temperature: 0.7 },
+    systemPrompt: WORLD_BUILDER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: WorldDesignSchema,
+    temperature: 0.7,
   });
-  return WorldDesignSchema.parse(result.structuredOutput);
+  return output;
 }

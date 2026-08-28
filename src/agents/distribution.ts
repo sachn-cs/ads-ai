@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { DistributionPackageSchema, type DistributionPackage } from '@/src/models';
 import { DISTRIBUTION_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
@@ -36,13 +35,6 @@ export async function invokeDistribution(
   cfg: TextProviderConfig,
   input: DistributionInput,
 ): Promise<DistributionPackage> {
-  const agent = new Agent({
-    id: distributionSpec.id,
-    description: distributionSpec.description,
-    systemPrompt: distributionSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.4 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -61,8 +53,13 @@ export async function invokeDistribution(
     JSON.stringify(input.composite, null, 2),
     '\nProduce a DistributionPackage. Do not fabricate festival deadlines — leave fields empty if uncertain.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: DistributionPackageSchema,
+  const { output } = await invokeStructuredAgent<DistributionPackage>({
+    agentId: 'distribution',
+    cfg: { ...cfg, temperature: 0.4 },
+    systemPrompt: DISTRIBUTION_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: DistributionPackageSchema,
+    temperature: 0.4,
   });
-  return DistributionPackageSchema.parse(result.structuredOutput);
+  return output;
 }

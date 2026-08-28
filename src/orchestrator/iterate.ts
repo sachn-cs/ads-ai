@@ -1,11 +1,10 @@
-import { Agent } from '@strands-agents/sdk';
 import type { ZodTypeAny } from 'zod';
-import { buildModel } from '@/src/providers/factory';
 import { listAgentOutputs } from '@/src/db/events';
 import { updateRun } from '@/src/db/runs';
 import { logger } from '@/src/lib/logger';
 import { emit } from '@/src/stream/sinks';
 import type { CinestudioConfig, TextProviderConfig } from '@/src/types';
+import { invokeStructuredAgent } from '@/src/agents/invoke';
 import {
   IterationControlReportSchema,
   CompositeQualityReportSchema,
@@ -35,16 +34,17 @@ async function callAgent<T extends ZodTypeAny>(
   signal?: AbortSignal,
 ): Promise<unknown> {
   if (signal?.aborted) throw new Error('aborted');
-  const agent = new Agent({
-    id: 'iteration-cycle-agent',
-    description: 'Iteration cycle agent',
+  const { output } = await invokeStructuredAgent({
+    agentId: 'iteration_cycle',
+    cfg: { ...cfg, temperature: 0.55 },
     systemPrompt:
       'You are an iteration cycle agent. Return strictly the JSON object matching the requested schema.',
-    model: buildModel(cfg),
-    printer: false,
+    userPrompt,
+    schema,
+    temperature: 0.55,
   });
-  const result = await agent.invoke(userPrompt, { structuredOutputSchema: schema, cancelSignal: signal });
-  return schema.parse(result.structuredOutput);
+  if (signal?.aborted) throw new Error('aborted');
+  return output;
 }
 
 function loadLatestComposite(runId: string): CompositeQualityReport {
@@ -92,8 +92,8 @@ export async function runIterationLoop(input: IterateInput): Promise<IterationCy
 
     emit({
       runId: input.runId,
-      type: 'iteration_completed',
       agentId: 'iteration_controller',
+      type: 'iteration_completed',
       payload: { cycle: cycleNumber, shouldContinue: iterationReport.shouldContinue },
     });
 
@@ -112,8 +112,8 @@ export async function runIterationLoop(input: IterateInput): Promise<IterationCy
       log.info('iteration_cycle_rendering', { cycle: cycleNumber, shots: iterationReport.shotDirectives.length });
       emit({
         runId: input.runId,
-        type: 'iteration_started',
         agentId: 'iteration_controller',
+        type: 'iteration_started',
         payload: { cycle: cycleNumber, shots: iterationReport.shotDirectives.map((d) => d.shotId) },
       });
     }

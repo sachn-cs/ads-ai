@@ -1,4 +1,3 @@
-import { Agent } from '@strands-agents/sdk';
 import {
   VoiceCastSchema,
   type VoiceCast,
@@ -8,7 +7,7 @@ import {
   type SoundDesignPlan,
 } from '@/src/models';
 import { VOICE_CASTING_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import { synthesizeWithMiniMaxSpeech, saveMiniMaxAudio } from '@/src/providers/minimax/speech';
 import { getDb } from '@/src/db/client';
 import { insertMultimodalAsset } from '@/src/db/multimodal-assets';
@@ -45,13 +44,6 @@ export async function invokeVoiceCasting(
   input: VoiceCastingInput,
   runId?: string,
 ): Promise<VoiceCast> {
-  const agent = new Agent({
-    id: voiceCastingSpec.id,
-    description: voiceCastingSpec.description,
-    systemPrompt: VOICE_CASTING_SYSTEM_PROMPT,
-    model: buildModel({ ...cfg.textProvider, temperature: 0.5 }),
-    printer: false,
-  });
   const prompt = [
     'CHARACTER CAST:',
     JSON.stringify(input.cast, null, 2),
@@ -64,10 +56,14 @@ export async function invokeVoiceCasting(
     input.previous ? `\nPREVIOUS VOICE CAST:\n${JSON.stringify(input.previous, null, 2)}\n` : '',
     '\nProduce a VoiceCast.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: VoiceCastSchema,
+  const { output: cast } = await invokeStructuredAgent<VoiceCast>({
+    agentId: 'voice_casting',
+    cfg: { ...cfg.textProvider, temperature: 0.5 },
+    systemPrompt: VOICE_CASTING_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: VoiceCastSchema,
+    temperature: 0.5,
   });
-  const cast = VoiceCastSchema.parse(result.structuredOutput);
 
   if (runId && cfg.multimodal.speech.enabled && cfg.multimodal.speech.apiKey) {
     const speechCfg = {
@@ -114,6 +110,3 @@ export async function invokeVoiceCasting(
 
   return cast;
 }
-
-// (VoiceCastingInput exported via the export type at top of file)
-

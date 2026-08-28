@@ -1,11 +1,10 @@
-import { Agent } from '@strands-agents/sdk';
 import { z } from 'zod';
 import {
   RenderBatchPlanSchema,
   type RenderBatchPlan,
 } from '@/src/models';
 import { SHOT_PLANNER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
@@ -23,12 +22,13 @@ export const shotPlannerSpec = {
   systemPrompt: SHOT_PLANNER_SYSTEM_PROMPT,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const AvailableProvidersSchema = z.object({
+const _AvailableProvidersSchema = z.object({
   veo: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
   sora: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
   runway: z.object({ enabled: z.boolean(), maxConcurrentShots: z.number().min(1) }),
-});export interface ShotPlannerInput {
+});
+
+export interface ShotPlannerInput {
   brief: CinestudioBrief;
   script: ScriptBreakdown;
   cast: CharacterCast;
@@ -41,13 +41,6 @@ export async function invokeShotPlanner(
   cfg: TextProviderConfig,
   input: ShotPlannerInput,
 ): Promise<RenderBatchPlan[]> {
-  const agent = new Agent({
-    id: shotPlannerSpec.id,
-    description: shotPlannerSpec.description,
-    systemPrompt: shotPlannerSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.5 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -65,14 +58,19 @@ export async function invokeShotPlanner(
         veo: { enabled: input.providers.veo.enabled, maxConcurrentShots: input.providers.veo.maxConcurrentShots },
         sora: { enabled: input.providers.sora.enabled, maxConcurrentShots: input.providers.sora.maxConcurrentShots },
         runway: { enabled: input.providers.runway.enabled, maxConcurrentShots: input.providers.runway.maxConcurrentShots },
-      } satisfies z.infer<typeof AvailableProvidersSchema>,
+      } satisfies z.infer<typeof _AvailableProvidersSchema>,
       null,
       2,
     ),
     '\nProduce RenderBatchPlan[] honoring provider availability. Only assign to ENABLED providers.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: z.array(RenderBatchPlanSchema),
+  const { output } = await invokeStructuredAgent<RenderBatchPlan[]>({
+    agentId: 'shot_planner',
+    cfg: { ...cfg, temperature: 0.5 },
+    systemPrompt: SHOT_PLANNER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: z.array(RenderBatchPlanSchema),
+    temperature: 0.5,
   });
-  return z.array(RenderBatchPlanSchema).parse(result.structuredOutput);
+  return output;
 }

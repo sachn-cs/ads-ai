@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { ScorePlanSchema, type ScorePlan, type CinestudioBrief, type ScriptBreakdown, type Storyboard } from '@/src/models';
 import { COMPOSER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import { generateWithMiniMaxMusic, saveMiniMaxMusic } from '@/src/providers/minimax/music';
 import { getDb } from '@/src/db/client';
 import { insertMultimodalAsset } from '@/src/db/multimodal-assets';
@@ -30,13 +29,6 @@ export async function invokeComposer(
   input: ComposerInput,
   runId?: string,
 ): Promise<ScorePlan> {
-  const agent = new Agent({
-    id: composerSpec.id,
-    description: composerSpec.description,
-    systemPrompt: composerSpec.systemPrompt,
-    model: buildModel({ ...cfg.textProvider, temperature: 0.85 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -47,10 +39,14 @@ export async function invokeComposer(
     input.previous ? `\nPREVIOUS SCORE PLAN:\n${JSON.stringify(input.previous, null, 2)}\n` : '',
     '\nProduce a ScorePlan.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: ScorePlanSchema,
+  const { output: scorePlan } = await invokeStructuredAgent<ScorePlan>({
+    agentId: 'composer',
+    cfg: { ...cfg.textProvider, temperature: 0.85 },
+    systemPrompt: COMPOSER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: ScorePlanSchema,
+    temperature: 0.85,
   });
-  const scorePlan = ScorePlanSchema.parse(result.structuredOutput);
 
   if (runId && cfg.multimodal.music.enabled && cfg.multimodal.music.apiKey) {
     const musicCfg = {

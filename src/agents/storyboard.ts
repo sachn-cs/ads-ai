@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { StoryboardSchema, type Storyboard, type CinestudioBrief, type ScriptBreakdown, type CharacterCast, type WorldDesign } from '@/src/models';
 import { STORYBOARD_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import { generateWithMiniMaxImage, downloadMiniMaxImage } from '@/src/providers/minimax/image';
 import { getDb } from '@/src/db/client';
 import { insertMultimodalAsset } from '@/src/db/multimodal-assets';
@@ -32,13 +31,6 @@ export async function invokeStoryboard(
   input: StoryboardInput,
   runId?: string,
 ): Promise<Storyboard> {
-  const agent = new Agent({
-    id: storyboardSpec.id,
-    description: storyboardSpec.description,
-    systemPrompt: storyboardSpec.systemPrompt,
-    model: buildModel({ ...cfg.textProvider, temperature: 0.8 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -52,10 +44,14 @@ export async function invokeStoryboard(
     input.iterationDirective ? `\nITERATION DIRECTIVE:\n${input.iterationDirective}\n` : '',
     '\nProduce a Storyboard. Pre-compute render batches so the dispatcher can fan out economically.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: StoryboardSchema,
+  const { output: storyboard } = await invokeStructuredAgent<Storyboard>({
+    agentId: 'storyboard',
+    cfg: { ...cfg.textProvider, temperature: 0.8 },
+    systemPrompt: STORYBOARD_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: StoryboardSchema,
+    temperature: 0.8,
   });
-  const storyboard = StoryboardSchema.parse(result.structuredOutput);
 
   if (runId && cfg.multimodal.image.enabled && cfg.multimodal.image.apiKey) {
     const imageCfg = {

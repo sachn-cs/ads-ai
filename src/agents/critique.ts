@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { CritiqueReportSchema, type CritiqueReport } from '@/src/models';
 import { CRITIQUE_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
@@ -34,13 +33,6 @@ export async function invokeCritique(
   cfg: TextProviderConfig,
   input: CritiqueInput,
 ): Promise<CritiqueReport> {
-  const agent = new Agent({
-    id: critiqueSpec.id,
-    description: critiqueSpec.description,
-    systemPrompt: critiqueSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.55 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -60,8 +52,13 @@ export async function invokeCritique(
       : '',
     '\nProduce a CritiqueReport with at minimum: perShot[i].overallScore, decision, recommendedFixes.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: CritiqueReportSchema,
+  const { output } = await invokeStructuredAgent<CritiqueReport>({
+    agentId: 'critique',
+    cfg: { ...cfg, temperature: 0.55 },
+    systemPrompt: CRITIQUE_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: CritiqueReportSchema,
+    temperature: 0.55,
   });
-  return CritiqueReportSchema.parse(result.structuredOutput);
+  return output;
 }

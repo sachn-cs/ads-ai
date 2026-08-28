@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { CompositeQualityReportSchema, type CompositeQualityReport } from '@/src/models';
 import { SCORING_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type { CritiqueReport } from '@/src/models';
 
@@ -22,21 +21,19 @@ export async function invokeScoring(
   cfg: TextProviderConfig,
   input: ScoringInput,
 ): Promise<CompositeQualityReport> {
-  const agent = new Agent({
-    id: scoringSpec.id,
-    description: scoringSpec.description,
-    systemPrompt: scoringSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.3 }),
-    printer: false,
-  });
   const prompt = [
     `Cycle ${input.cycleNumber}. Passing threshold ${input.passingThreshold}.`,
     '\nCRITIQUE REPORT:',
     JSON.stringify(input.critique, null, 2),
     '\nProduce a CompositeQualityReport.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: CompositeQualityReportSchema,
+  const { output } = await invokeStructuredAgent<CompositeQualityReport>({
+    agentId: 'scoring',
+    cfg: { ...cfg, temperature: 0.3 },
+    systemPrompt: SCORING_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: CompositeQualityReportSchema,
+    temperature: 0.3,
   });
-  return CompositeQualityReportSchema.parse(result.structuredOutput);
+  return output;
 }

@@ -1,8 +1,7 @@
-import { Agent } from '@strands-agents/sdk';
 import { z } from 'zod';
 import type { TextProviderConfig } from '@/src/types';
-import { buildModel } from '@/src/providers/factory';
 import { CONTINUITY_CHECKER_SYSTEM_PROMPT } from '@/src/prompts';
+import { invokeStructuredAgent } from './invoke';
 import type {
   CharacterCast,
   ScriptBreakdown,
@@ -39,13 +38,6 @@ export async function invokeContinuityChecker(
   cfg: TextProviderConfig,
   input: ContinuityCheckerInput,
 ): Promise<ContinuityIssue[]> {
-  const agent = new Agent({
-    id: continuityCheckerSpec.id,
-    description: continuityCheckerSpec.description,
-    systemPrompt: continuityCheckerSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.4 }),
-    printer: false,
-  });
   const prompt = [
     'RENDERED SHOTS:',
     JSON.stringify(input.shots, null, 2),
@@ -57,8 +49,13 @@ export async function invokeContinuityChecker(
     JSON.stringify(input.script, null, 2),
     '\nReturn ALL continuity issues you find. Be exhaustive; do not omit.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: ContinuityIssuesSchema,
+  const { output } = await invokeStructuredAgent<ContinuityIssue[]>({
+    agentId: 'continuity_checker',
+    cfg: { ...cfg, temperature: 0.4 },
+    systemPrompt: CONTINUITY_CHECKER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: ContinuityIssuesSchema,
+    temperature: 0.4,
   });
-  return ContinuityIssuesSchema.parse(result.structuredOutput);
+  return output;
 }

@@ -1,4 +1,3 @@
-import { Agent } from '@strands-agents/sdk';
 import {
   CharacterCastSchema,
   type CharacterCast,
@@ -6,7 +5,7 @@ import {
   type ScriptBreakdown,
 } from '@/src/models';
 import { CHARACTER_DESIGNER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import { generateWithMiniMaxImage, downloadMiniMaxImage } from '@/src/providers/minimax/image';
 import { getDb } from '@/src/db/client';
 import { insertMultimodalAsset } from '@/src/db/multimodal-assets';
@@ -34,13 +33,6 @@ export async function invokeCharacterDesigner(
   input: CharacterDesignerInput,
   runId?: string,
 ): Promise<CharacterCast> {
-  const agent = new Agent({
-    id: characterDesignerSpec.id,
-    description: characterDesignerSpec.description,
-    systemPrompt: characterDesignerSpec.systemPrompt,
-    model: buildModel({ ...cfg.textProvider, temperature: 0.75 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -49,10 +41,14 @@ export async function invokeCharacterDesigner(
     input.previous ? `\nPREVIOUS CAST (preserve references where possible):\n${JSON.stringify(input.previous, null, 2)}\n` : '',
     '\nProduce a CharacterCast. Reference seeds must NEVER describe real people.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: CharacterCastSchema,
+  const { output: cast } = await invokeStructuredAgent<CharacterCast>({
+    agentId: 'character_designer',
+    cfg: { ...cfg.textProvider, temperature: 0.75 },
+    systemPrompt: CHARACTER_DESIGNER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: CharacterCastSchema,
+    temperature: 0.75,
   });
-  const cast = CharacterCastSchema.parse(result.structuredOutput);
 
   if (runId && cfg.multimodal.image.enabled && cfg.multimodal.image.apiKey) {
     const imageCfg = {

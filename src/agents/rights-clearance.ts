@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { RightsReportSchema, type RightsReport } from '@/src/models';
 import { RIGHTS_CLEARANCE_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type {
   CinestudioBrief,
@@ -32,13 +31,6 @@ export async function invokeRightsClearance(
   cfg: TextProviderConfig,
   input: RightsClearanceInput,
 ): Promise<RightsReport> {
-  const agent = new Agent({
-    id: rightsClearanceSpec.id,
-    description: rightsClearanceSpec.description,
-    systemPrompt: rightsClearanceSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.2 }),
-    printer: false,
-  });
   const prompt = [
     'CINESTUDIO BRIEF:',
     JSON.stringify(input.brief, null, 2),
@@ -54,8 +46,13 @@ export async function invokeRightsClearance(
     JSON.stringify(input.continuityIssues, null, 2),
     '\nProduce a RightsReport. Blockers must have severity=blocker.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: RightsReportSchema,
+  const { output } = await invokeStructuredAgent<RightsReport>({
+    agentId: 'rights_clearance',
+    cfg: { ...cfg, temperature: 0.2 },
+    systemPrompt: RIGHTS_CLEARANCE_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: RightsReportSchema,
+    temperature: 0.2,
   });
-  return RightsReportSchema.parse(result.structuredOutput);
+  return output;
 }

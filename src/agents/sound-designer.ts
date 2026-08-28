@@ -1,4 +1,3 @@
-import { Agent } from '@strands-agents/sdk';
 import {
   SoundDesignPlanSchema,
   type SoundDesignPlan,
@@ -9,7 +8,7 @@ import {
   type Storyboard,
 } from '@/src/models';
 import { SOUND_DESIGNER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import { synthesizeWithMiniMaxSpeech, saveMiniMaxAudio } from '@/src/providers/minimax/speech';
 import { getDb } from '@/src/db/client';
 import { insertMultimodalAsset } from '@/src/db/multimodal-assets';
@@ -40,13 +39,6 @@ export async function invokeSoundDesigner(
   input: SoundDesignerInput,
   runId?: string,
 ): Promise<SoundDesignPlan> {
-  const agent = new Agent({
-    id: soundDesignerSpec.id,
-    description: soundDesignerSpec.description,
-    systemPrompt: soundDesignerSpec.systemPrompt,
-    model: buildModel({ ...cfg.textProvider, temperature: 0.6 }),
-    printer: false,
-  });
   const prompt = [
     'SCRIPT BREAKDOWN:',
     JSON.stringify(input.script, null, 2),
@@ -59,10 +51,14 @@ export async function invokeSoundDesigner(
     input.previous ? `\nPREVIOUS SOUND PLAN:\n${JSON.stringify(input.previous, null, 2)}\n` : '',
     '\nProduce a SoundDesignPlan.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: SoundDesignPlanSchema,
+  const { output: plan } = await invokeStructuredAgent<SoundDesignPlan>({
+    agentId: 'sound_designer',
+    cfg: { ...cfg.textProvider, temperature: 0.6 },
+    systemPrompt: SOUND_DESIGNER_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: SoundDesignPlanSchema,
+    temperature: 0.6,
   });
-  const plan = SoundDesignPlanSchema.parse(result.structuredOutput);
 
   if (runId && cfg.multimodal.speech.enabled && cfg.multimodal.speech.apiKey) {
     const speechCfg = {

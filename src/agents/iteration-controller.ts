@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { IterationControlReportSchema, type IterationControlReport } from '@/src/models';
 import { ITERATION_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 import type { CritiqueReport, CompositeQualityReport } from '@/src/models';
 
@@ -23,13 +22,6 @@ export async function invokeIterationController(
   cfg: TextProviderConfig,
   input: IterationInput,
 ): Promise<IterationControlReport> {
-  const agent = new Agent({
-    id: iterationSpec.id,
-    description: iterationSpec.description,
-    systemPrompt: iterationSpec.systemPrompt,
-    model: buildModel({ ...cfg, temperature: 0.55 }),
-    printer: false,
-  });
   const prompt = [
     `Cycle ${input.cycleNumber} of max ${input.maxCycles}.`,
     '\nCRITIQUE REPORT:',
@@ -38,8 +30,13 @@ export async function invokeIterationController(
     JSON.stringify(input.composite, null, 2),
     '\nProduce an IterationControlReport. shouldContinue=false iff all shots are GO or max cycles hit.',
   ].join('\n');
-  const result = await agent.invoke(prompt, {
-    structuredOutputSchema: IterationControlReportSchema,
+  const { output } = await invokeStructuredAgent<IterationControlReport>({
+    agentId: 'iteration_controller',
+    cfg: { ...cfg, temperature: 0.55 },
+    systemPrompt: ITERATION_SYSTEM_PROMPT,
+    userPrompt: prompt,
+    schema: IterationControlReportSchema,
+    temperature: 0.55,
   });
-  return IterationControlReportSchema.parse(result.structuredOutput);
+  return output;
 }

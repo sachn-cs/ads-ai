@@ -1,7 +1,6 @@
-import { Agent } from '@strands-agents/sdk';
 import { CinestudioBriefSchema, type CinestudioBrief } from '@/src/models';
 import { SHOWRUNNER_SYSTEM_PROMPT } from '@/src/prompts';
-import { buildModel } from '@/src/providers/factory';
+import { invokeStructuredAgent } from './invoke';
 import type { TextProviderConfig } from '@/src/types';
 
 export const showrunnerSpec = {
@@ -15,15 +14,13 @@ export async function invokeShowrunner(
   cfg: TextProviderConfig,
   userInput: string,
 ): Promise<CinestudioBrief> {
-  const agent = new Agent({
-    id: showrunnerSpec.id,
-    description: showrunnerSpec.description,
-    systemPrompt: showrunnerSpec.systemPrompt,
-    model: buildModel(cfg),
-    printer: false,
+  const { output } = await invokeStructuredAgent<CinestudioBrief>({
+    agentId: 'showrunner',
+    cfg,
+    systemPrompt: SHOWRUNNER_SYSTEM_PROMPT,
+    userPrompt: userInput,
+    schema: CinestudioBriefSchema,
+    temperature: 0.85,
   });
-  const result = await agent.invoke(userInput, {
-    structuredOutputSchema: CinestudioBriefSchema,
-  });
-  return CinestudioBriefSchema.parse(result.structuredOutput);
+  return output;
 }
