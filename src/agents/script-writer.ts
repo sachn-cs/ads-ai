@@ -28,9 +28,10 @@ export async function invokeScriptWriter(
       ? `\nPREVIOUS SCRIPT (for reference / continuity):\n${JSON.stringify(input.previous, null, 2)}\n`
       : '',
     input.iterationDirective ? `\nITERATION DIRECTIVE:\n${input.iterationDirective}\n` : '',
-    '\nIMPORTANT: target scene count = max 6 scenes for this short film. ' +
-      'Each scene should be 5-12 seconds. Keep dialogue + voiceover minimal. ' +
-      'Compress beats aggressively; do NOT produce per-character beats for every scene.',
+    '\nIMPORTANT: target scene count = MAX 4 scenes for this short film. ' +
+      'Each scene should be 8-15 seconds. Keep dialogue + voiceover to 1-2 lines max. ' +
+      'Compress beats aggressively; do NOT produce per-character beats for every scene. ' +
+      'NEVER leave a scene half-finished — better 3 complete scenes than 4 with the last one truncated.',
     '\nProduce a ScriptBreakdown that respects the brief and (if provided) integrates the iteration directive.',
   ].join('\n');
   const { output } = await invokeStructuredAgent<ScriptBreakdown>({
