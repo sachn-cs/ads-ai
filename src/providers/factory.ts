@@ -62,7 +62,7 @@ function buildOpenAICompatibleProvider(cfg: TextProviderConfig): LanguageModelV3
   const baseURL = cfg.baseUrl ?? (
     cfg.provider === 'ollama'
       ? process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1'
-      : process.env.MINIMAX_BASE_URL ?? 'https://api.minimax.chat/v1'
+      : process.env.MINIMAX_BASE_URL ?? 'https://api.minimax.io/v1'
   );
   const compat = createOpenAICompatible({
     name: cfg.provider,
