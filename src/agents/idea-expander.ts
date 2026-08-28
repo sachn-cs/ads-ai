@@ -124,12 +124,29 @@ export async function invokeIdeaExpander(
   }
 
   const now = new Date().toISOString();
+  const VALID_ASPECT = new Set(['16:9', '9:16', '1:1', '21:9', '4:3']);
   const finalWrapped = {
     variants: parsed.variants.slice(0, 3).map((v, i) => {
       const va = v as Record<string, unknown>;
       const br = (va.brief as Record<string, unknown>) ?? {};
       const toneRaw = br.tone;
       const tone = Array.isArray(toneRaw) ? (toneRaw as string[]) : typeof toneRaw === 'string' ? [toneRaw] : [];
+      const vaVis = br.visualApproach;
+      let visualApproach: unknown;
+      if (typeof vaVis === 'string') {
+        visualApproach = vaVis;
+      } else if (vaVis && typeof vaVis === 'object') {
+        const obj = vaVis as Record<string, unknown>;
+        const ar = typeof obj.aspectRatio === 'string' && VALID_ASPECT.has(obj.aspectRatio) ? obj.aspectRatio : '16:9';
+        visualApproach = {
+          primaryHues: Array.isArray(obj.primaryHues) ? obj.primaryHues.filter((h) => typeof h === 'string') : [],
+          contrastLevel: ['low', 'medium', 'high'].includes(obj.contrastLevel as string) ? obj.contrastLevel : 'medium',
+          aspectRatio: ar,
+          grain: ['none', 'subtle', 'heavy'].includes(obj.grain as string) ? obj.grain : 'subtle',
+        };
+      } else {
+        visualApproach = 'Cinematic natural-light palette.';
+      }
       return {
         id: (va.id as string) ?? ulid(),
         index: typeof va.index === 'number' ? va.index : i,
@@ -139,6 +156,7 @@ export async function invokeIdeaExpander(
           id: (br.id as string) ?? ulid(),
           producedAt: typeof br.producedAt === 'string' ? br.producedAt : now,
           tone,
+          visualApproach,
         },
         confidence: typeof va.confidence === 'number' ? va.confidence : 0.7,
       };
