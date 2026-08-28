@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import { CinematographyPaletteSchema } from './common';
+
+const VisualApproachLooseSchema = z.union([
+  z.string().min(1),
+  CinematographyPaletteSchema,
+]);
 
 export const IdeaVariantSchema = z.object({
   id: z.string(),
@@ -16,7 +22,7 @@ export const IdeaVariantSchema = z.object({
       tone: z.array(z.string()).min(1),
       targetRuntimeSeconds: z.number().int().min(15),
       creativeNorthStars: z.array(z.string()).min(2).max(7),
-      visualApproach: z.string().min(20),
+      visualApproach: VisualApproachLooseSchema,
       mustHaves: z.array(z.string()),
       avoidances: z.array(z.string()),
     })
