@@ -19,7 +19,7 @@ export async function invokeStyleGuide(
   log.info('style_guide_invoking', { briefId: brief.id });
   const { output } = await invokeStructuredAgent<StyleGuide>({
     agentId: 'style_guide',
-    cfg: { ...cfg, temperature: 0.6 },
+    cfg: { ...cfg, temperature: 0.6, maxTokens: 16384 },
     systemPrompt: STYLE_GUIDE_SYSTEM_PROMPT,
     userPrompt: `CINESTUDIO BRIEF:\n${JSON.stringify(brief, null, 2)}\n\nProduce the StyleGuide JSON.`,
     schema: StyleGuideSchema,
