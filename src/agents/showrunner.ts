@@ -115,9 +115,20 @@ export async function invokeShowrunner(
   let rawInput: unknown;
   if (toolUse?.input !== undefined) {
     rawInput = toolUse.input;
-  } else {
+  } else if (raw.content?.some((b) => b.type === 'tool_use')) {
+    const anyTool = raw.content.find((b) => b.type === 'tool_use') as { input?: unknown };
+    rawInput = anyTool?.input;
+  }
+  if (rawInput === undefined) {
     const m = result.text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('showrunner produced unparseable output');
+    if (!m) {
+      log.error('showrunner_no_tool_or_json', {
+        textLength: result.text.length,
+        textPreview: result.text.slice(0, 500),
+        contentTypes: raw.content?.map((b) => b.type).join(','),
+      });
+      throw new Error('showrunner produced unparseable output');
+    }
     rawInput = JSON.parse(m[0]);
   }
 
