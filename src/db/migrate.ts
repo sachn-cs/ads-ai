@@ -1,30 +1,33 @@
 import { resetDbForTesting, getDb } from './client';
 import { SCHEMA_DDL, MIGRATIONS } from './schema';
+import { logger } from '@/src/lib/logger';
 
 const isReset = process.argv.includes('--reset');
 const isMigrate = !isReset;
 
+const log = logger('db/migrate');
+
 if (isReset) {
   resetDbForTesting();
-  console.log('[migrate] reset');
+  log.info('migrate_reset');
 }
 
 const db = getDb();
-console.log(isMigrate ? '[migrate] applying schema...' : '[migrate] re-applying schema after reset...');
+log.info(isMigrate ? 'migrate_applying_schema' : 'migrate_reapplying_schema');
 
 for (const stmt of SCHEMA_DDL) {
   db.prepare(stmt).run();
 }
-console.log('[migrate] schema OK');
+log.info('migrate_schema_ok');
 
 const applied = new Set(
   (db.prepare('SELECT name FROM migrations').all() as { name: string }[]).map((r) => r.name),
 );
 const queued = MIGRATIONS.filter((m) => !applied.has(m.name));
 if (queued.length === 0) {
-  console.log('[migrate] no pending migrations');
+  log.info('migrate_no_pending');
 } else {
-  console.log(`[migrate] running ${queued.length} migration(s): ${queued.map((m) => m.name).join(', ')}`);
+  log.info('migrate_running_migrations', { count: queued.length, names: queued.map((m) => m.name) });
 }
-console.log('[migrate] done');
+log.info('migrate_done');
 process.exit(0);

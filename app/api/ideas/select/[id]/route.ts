@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/src/db/client';
 import { listIdeaVariants, markIdeaVariantSelected } from '@/src/db/idea-variants';
 import { updateRun } from '@/src/db/runs';
+import { SelectVariantRequestSchema } from '@/src/lib/validation';
 import { logger } from '@/src/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -12,10 +13,20 @@ const log = logger('api/ideas/select');
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: runId } = await params;
   try {
-    const body = (await request.json()) as { variantIndex?: number };
-    if (typeof body.variantIndex !== 'number') {
-      return NextResponse.json({ error: 'variantIndex required' }, { status: 400 });
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
     }
+    const parsed = SelectVariantRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid request', issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
     const db = getDb();
     const existing = listIdeaVariants(db, runId);
     if (existing.length === 0) {
@@ -25,7 +36,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'variantIndex out of range' }, { status: 400 });
     }
     markIdeaVariantSelected(db, runId, body.variantIndex);
-    const selected = existing.find((v) => v.variant_index === body.variantIndex)!;
+    const selected = existing.find((v) => v.variant_index === body.variantIndex);
+    if (!selected) {
+      return NextResponse.json({ error: 'variant not found' }, { status: 404 });
+    }
     updateRun(runId, { status: 'queued' });
     log.info('variant_selected', { runId, variantIndex: body.variantIndex });
     return NextResponse.json({

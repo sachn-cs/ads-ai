@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Save, KeyRound, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -135,24 +135,6 @@ export default function OnboardingSetup() {
         setLoading(false);
       }
     })();
-  }, []);
-
-  // Derive model + baseUrl from the chosen preset so we don't have to run
-  // an effect with setState. The provider switch drives preset → defaults.
-  const activePreset = PROVIDER_PRESETS.find((p) => p.id === textProvider);
-  const presetDefaultsModel = activePreset?.model ?? 'MiniMax-M3';
-  const presetDefaultsBaseUrl = activePreset?.defaultBaseUrl ?? '';
-  const effectiveBaseUrl = baseUrl || presetDefaultsBaseUrl;
-  const effectiveModel = model || presetDefaultsModel;
-
-  useEffect(() => {
-    if (
-      textProvider &&
-      model !== (PROVIDER_PRESETS.find((p) => p.id === textProvider)?.model ?? model)
-    ) {
-      // Only run on initial mount or when user explicitly switches provider.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleTest() {

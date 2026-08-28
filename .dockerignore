@@ -1,0 +1,29 @@
+# Build artifacts
+.next
+node_modules
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.log
+coverage
+out
+dist
+build
+.DS_Store
+
+# Tests / dev
+tests
+vitest.config.ts
+playwright.config.*
+
+# Docs (not needed in image)
+README.md
+CHANGELOG.md
+docs
+artifacts
+
+# IDE
+.vscode
+.idea

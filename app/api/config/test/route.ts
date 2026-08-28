@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { loadConfig, saveConfig } from '@/src/db/configs';
+import { saveConfig } from '@/src/db/configs';
+import { resolveAndAssertSafe, SSRFBlockedError } from '@/src/lib/ssrf';
+import { ConfigTestRequestSchema, CinestudioConfigSchema } from '@/src/lib/validation';
 import type { CinestudioConfig } from '@/src/types';
 import { logger } from '@/src/lib/logger';
 
@@ -15,22 +17,24 @@ interface ProviderTest {
   model: string;
 }
 
-async function testOne(p: ProviderTest): Promise<{ provider: string; ok: boolean; latencyMs: number; error?: string }> {
+async function testOne(
+  p: ProviderTest,
+  allowHttp: boolean,
+): Promise<{ provider: string; ok: boolean; latencyMs: number; error?: string }> {
   const start = Date.now();
   try {
     switch (p.provider) {
       case 'minimax': {
-        // Cheapest possible MiniMax call: list models.
-        const url = (p.baseUrl ?? 'https://api.minimax.io').replace(/\/+$/, '');
-        const r = await fetch(`${url}/v1/models`, {
+        const url = resolveAndAssertSafe(p.baseUrl ?? 'https://api.minimax.io', { allowHttp });
+        const base = url.toString().replace(/\/+$/, '');
+        const r = await fetch(`${base}/v1/models`, {
           headers: { Authorization: `Bearer ${p.apiKey ?? ''}` },
         });
         if (!r.ok) {
           const body = await r.text().catch(() => '');
           throw new Error(`MiniMax models returned ${r.status}: ${body.slice(0, 100)}`);
         }
-        // Cheap MiniMax text-gen probe: send a tiny Anthropic-format request.
-        const r2 = await fetch(`${url.replace('/v1', '')}/anthropic/v1/messages`, {
+        const r2 = await fetch(`${base.replace('/v1', '')}/anthropic/v1/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.apiKey ?? ''}` },
           body: JSON.stringify({
@@ -46,13 +50,12 @@ async function testOne(p: ProviderTest): Promise<{ provider: string; ok: boolean
         return { provider: 'minimax', ok: true, latencyMs: Date.now() - start };
       }
       case 'ollama': {
-        const url = (p.baseUrl ?? 'http://localhost:11434').replace(/\/+$/, '');
-        const r = await fetch(`${url}/api/tags`);
+        const url = resolveAndAssertSafe(p.baseUrl ?? 'http://localhost:11434', { allowHttp: true });
+        const r = await fetch(`${url.toString().replace(/\/+$/, '')}/api/tags`);
         if (!r.ok) throw new Error(`Ollama returned ${r.status}`);
         return { provider: 'ollama', ok: true, latencyMs: Date.now() - start };
       }
       case 'bedrock': {
-        // We don't have aws-sdk installed; just verify the key looks plausible.
         if (!p.apiKey && !process.env.AWS_ACCESS_KEY_ID) {
           throw new Error('Bedrock needs AWS creds (apiKey or env AWS_*)');
         }
@@ -61,14 +64,13 @@ async function testOne(p: ProviderTest): Promise<{ provider: string; ok: boolean
       case 'anthropic':
       case 'openai':
       case 'google': {
-        // Probe with a tiny chat call.
         const defaultUrl: Record<string, string> = {
           anthropic: 'https://api.anthropic.com',
           openai: 'https://api.openai.com',
           google: 'https://generativelanguage.googleapis.com',
         };
-        const url = p.baseUrl ?? defaultUrl[p.provider];
-        const r = await fetch(`${url}/v1/models`, {
+        const url = resolveAndAssertSafe(p.baseUrl ?? defaultUrl[p.provider] ?? '', { allowHttp });
+        const r = await fetch(`${url.toString().replace(/\/+$/, '')}/v1/models`, {
           headers: { Authorization: `Bearer ${p.apiKey ?? ''}` },
         });
         if (!r.ok) throw new Error(`${p.provider} models endpoint returned ${r.status}`);
@@ -80,6 +82,9 @@ async function testOne(p: ProviderTest): Promise<{ provider: string; ok: boolean
       }
     }
   } catch (err) {
+    if (err instanceof SSRFBlockedError) {
+      return { provider: p.provider, ok: false, latencyMs: Date.now() - start, error: err.message };
+    }
     return {
       provider: p.provider,
       ok: false,
@@ -91,19 +96,35 @@ async function testOne(p: ProviderTest): Promise<{ provider: string; ok: boolean
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      providers?: ProviderTest[];
-      save?: boolean;
-      config?: CinestudioConfig;
-    };
-    if (!body.providers || !Array.isArray(body.providers) || body.providers.length === 0) {
-      return NextResponse.json({ error: 'providers array required' }, { status: 400 });
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
     }
-    const results = await Promise.all(body.providers.map((p) => testOne(p)));
+    const parsed = ConfigTestRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid request', issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
+    const allowHttp = process.env.NODE_ENV !== 'production';
+    const results = await Promise.all(body.providers.map((p) => testOne(p, allowHttp)));
     log.info('config_test_run', { count: body.providers.length, ok: results.filter((r) => r.ok).length });
 
     if (body.save && body.config) {
-      saveConfig(body.config);
+      const cfgCheck = CinestudioConfigSchema.safeParse(body.config);
+      if (!cfgCheck.success) {
+        return NextResponse.json(
+          { error: 'invalid config', issues: cfgCheck.error.flatten() },
+          { status: 400 },
+        );
+      }
+      const cfgToSave = cfgCheck.data as CinestudioConfig;
+      if (!cfgToSave.updatedAt) cfgToSave.updatedAt = new Date().toISOString();
+      saveConfig(cfgToSave);
     }
     return NextResponse.json({ results });
   } catch (err) {

@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import type { ShotRenderInstruction, ShotRenderResult } from '@/src/models';
 import { logger } from '@/src/lib/logger';
 import { writeJson } from '@/src/lib/artifacts';
+import { sanitizePathSegment } from '@/src/lib/path';
 import path from 'node:path';
 import { mkdir, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -27,7 +28,8 @@ export async function renderWithVeo(
   }
 
   const startedAt = new Date();
-  const logPath = path.join(cfg.artifactDir, 'logs', `veo-${instruction.shotId}.json`);
+  const safeShotId = sanitizePathSegment(instruction.shotId, 'shot');
+  const logPath = path.join(cfg.artifactDir, 'logs', `veo-${safeShotId}.json`);
 
   try {
     const client = new GoogleGenAI({ apiKey: cfg.apiKey });
@@ -80,7 +82,7 @@ export async function renderWithVeo(
       return failed(instruction, 'veo', 'Veo returned no video file.');
     }
 
-    const fileName = await downloadVeoFile(client, videoFile, instruction.shotId, cfg.artifactDir);
+    const fileName = await downloadVeoFile(client, videoFile, safeShotId, cfg.artifactDir);
     const fileSize = await stat(fileName).then((s) => s.size).catch(() => 0);
 
     writeJson(logPath, {

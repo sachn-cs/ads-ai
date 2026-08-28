@@ -77,11 +77,13 @@ export class RenderDispatchNode extends Node {
         1,
         ...Object.values(renderProviders).map((p) => p.maxConcurrentShots || 2),
       );
-      const instructionList = preserveShotIds
-        ? [...allInstructions].sort((a, b) => {
-            const idx = new Map(preserveShotIds.map((id, i) => [id, i] as const));
-            return (idx.get(a.shotId) ?? 9e9) - (idx.get(b.shotId) ?? 9e9);
-          })
+      const orderIndex = preserveShotIds
+        ? new Map(preserveShotIds.map((id, i) => [id, i] as const))
+        : undefined;
+      const instructionList = orderIndex
+        ? [...allInstructions].sort(
+            (a, b) => (orderIndex.get(a.shotId) ?? 9e9) - (orderIndex.get(b.shotId) ?? 9e9),
+          )
         : allInstructions;
 
       log.info('render_dispatch_started', { total: instructionList.length, maxConcurrent });

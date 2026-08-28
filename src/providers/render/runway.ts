@@ -2,6 +2,7 @@ import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import type { ShotRenderInstruction, ShotRenderResult } from '@/src/models';
 import { logger } from '@/src/lib/logger';
 import { writeJson } from '@/src/lib/artifacts';
+import { sanitizePathSegment } from '@/src/lib/path';
 import path from 'node:path';
 import { mkdir, stat } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -41,7 +42,8 @@ export async function renderWithRunway(
 
   const startedAt = new Date();
   const baseUrl = (cfg.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
-  const logPath = path.join(cfg.artifactDir, 'logs', `runway-${instruction.shotId}.json`);
+  const safeShotId = sanitizePathSegment(instruction.shotId, 'shot');
+  const logPath = path.join(cfg.artifactDir, 'logs', `runway-${safeShotId}.json`);
 
   try {
     log.info('runway_create_started', { shotId: instruction.shotId, model: cfg.model });
@@ -70,7 +72,7 @@ export async function renderWithRunway(
       return failed(instruction, 'runway', `Runway task ${taskId} succeeded but returned no output URL.`);
     }
 
-    const fileName = await downloadRunwayOutput(outputUrl, instruction.shotId, cfg.artifactDir);
+    const fileName = await downloadRunwayOutput(outputUrl, safeShotId, cfg.artifactDir);
     const fileSize = await stat(fileName).then((s) => s.size).catch(() => 0);
 
     writeJson(logPath, {
