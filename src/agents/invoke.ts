@@ -26,9 +26,17 @@ function schemaToOpenApi(schema: z.ZodTypeAny): Record<string, unknown> {
 
 function coerceSchema(name: string, value: unknown): unknown {
   if (value === undefined || value === null) return value;
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'object') return value;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    if (/^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value);
+    return value;
+  }
+  if (Array.isArray(value)) return value.map((v) => coerceSchema(name, v));
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = coerceSchema(`${name}.${k}`, v);
+    return out;
+  }
   return value;
 }
 
