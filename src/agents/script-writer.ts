@@ -28,11 +28,14 @@ export async function invokeScriptWriter(
       ? `\nPREVIOUS SCRIPT (for reference / continuity):\n${JSON.stringify(input.previous, null, 2)}\n`
       : '',
     input.iterationDirective ? `\nITERATION DIRECTIVE:\n${input.iterationDirective}\n` : '',
+    '\nIMPORTANT: target scene count = max 6 scenes for this short film. ' +
+      'Each scene should be 5-12 seconds. Keep dialogue + voiceover minimal. ' +
+      'Compress beats aggressively; do NOT produce per-character beats for every scene.',
     '\nProduce a ScriptBreakdown that respects the brief and (if provided) integrates the iteration directive.',
   ].join('\n');
   const { output } = await invokeStructuredAgent<ScriptBreakdown>({
     agentId: 'script_writer',
-    cfg: { ...cfg, temperature: 0.9 },
+    cfg: { ...cfg, temperature: 0.9, maxTokens: 16384 },
     systemPrompt: SCRIPT_WRITER_SYSTEM_PROMPT,
     userPrompt: prompt,
     schema: ScriptBreakdownSchema,
