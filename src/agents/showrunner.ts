@@ -132,7 +132,17 @@ export async function invokeShowrunner(
     rawInput = JSON.parse(m[0]);
   }
 
+  log.debug('showrunner_raw_input', { input: JSON.stringify(rawInput).slice(0, 1000) });
+
   const coerced = coerce(rawInput);
   const normalized = normalizeBrief(coerced as CinestudioBrief);
-  return CinestudioBriefSchema.parse(normalized);
+  try {
+    return CinestudioBriefSchema.parse(normalized);
+  } catch (err) {
+    log.error('showrunner_validate_failed', {
+      err: String(err).slice(0, 2000),
+      normalized: JSON.stringify(normalized).slice(0, 1500),
+    });
+    throw err;
+  }
 }
