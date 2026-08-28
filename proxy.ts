@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { edgeAuthEnabled, edgeCheckRequest, edgeIsPublicPath } from '@/src/lib/auth-edge';
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   if (!edgeAuthEnabled()) return NextResponse.next();
 
   const { pathname } = request.nextUrl;
