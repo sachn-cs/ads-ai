@@ -16,14 +16,15 @@ const sessionManagers = new Map<string, SessionManager>();
 export function getSessionManager(runId: string): SessionManager {
   const existing = sessionManagers.get(runId);
   if (existing) return existing;
+  const sessionId = runId.toLowerCase();
   const sm = new SessionManager({
-    sessionId: runId,
+    sessionId,
     storage: { snapshot: new FileStorage(SESSION_ROOT) },
     saveLatestOn: 'invocation',
   });
   sessionManagers.set(runId, sm);
   void mkdirQuiet(SESSION_ROOT);
-  log.info('session_manager_created', { runId, root: SESSION_ROOT });
+  log.info('session_manager_created', { runId, sessionId, root: SESSION_ROOT });
   return sm;
 }
 
