@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { startRun } from '@/src/orchestrator/run';
 import { listRuns, getRun, updateRun } from '@/src/db/runs';
 import { getSelectedIdeaVariant } from '@/src/db/idea-variants';
-import { getDb } from '@/src/db/client';
+import { CreateRunRequestSchema } from '@/src/lib/validation';
 import { logger } from '@/src/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -21,53 +21,56 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      prompt?: string;
-      runId?: string;
-      brief?: CinestudioBriefShape;
-    };
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
+    }
+    const parsed = CreateRunRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid request', issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
 
-    // Path A: pick-a-variant flow. Body has runId + brief.
-    // Resume the existing run with the selected brief; do NOT create a new run.
-    if (body.runId && body.brief) {
-      const db = getDb();
+    if (body.runId) {
       const existing = getRun(body.runId);
       if (!existing) {
         return NextResponse.json({ error: 'run not found' }, { status: 404 });
       }
-      updateRun(body.runId, {
-        status: 'queued',
-        brief_json: JSON.stringify(body.brief),
-        title: (body.brief.logline ?? 'film').slice(0, 80),
-      });
-      const result = startExistingRun(body.runId);
-      return NextResponse.json(result, { status: 202 });
-    }
-
-    // Path B: idea-picker flow. Body has runId only (selected variant
-    // is already chosen via /api/ideas/select). Re-read the selected
-    // brief from idea_variants.
-    if (body.runId) {
-      const db = getDb();
-      const existing = getRun(body.runId);
-      if (!existing) return NextResponse.json({ error: 'run not found' }, { status: 404 });
-      const selected = getSelectedIdeaVariant(db, body.runId);
-      if (!selected) {
-        return NextResponse.json({ error: 'no selected idea variant for this run' }, { status: 400 });
+      if (body.brief !== undefined) {
+        const brief = body.brief as { logline?: unknown };
+        const logline = typeof brief.logline === 'string' ? brief.logline.slice(0, 80) : null;
+        updateRun(body.runId, {
+          status: 'queued',
+          brief_json: JSON.stringify(body.brief),
+          title: logline,
+        });
+      } else {
+        const { getDb } = await import('@/src/db/client');
+        const selected = getSelectedIdeaVariant(getDb(), body.runId);
+        if (!selected) {
+          return NextResponse.json(
+            { error: 'no selected idea variant for this run' },
+            { status: 400 },
+          );
+        }
+        const variant = JSON.parse(selected.variant_json) as { brief?: { logline?: string } };
+        updateRun(body.runId, {
+          status: 'queued',
+          brief_json: selected.variant_json,
+          title: variant.brief?.logline?.slice(0, 80),
+        });
       }
-      const variant = JSON.parse(selected.variant_json);
-      updateRun(body.runId, {
-        status: 'queued',
-        brief_json: selected.variant_json,
-        title: variant.brief?.logline?.slice(0, 80),
-      });
-      const result = startExistingRun(body.runId);
+      const result = startRun({ runIdForResume: body.runId });
       return NextResponse.json(result, { status: 202 });
     }
 
-    // Path C: legacy flow. Create a brand-new run from a prompt.
-    if (!body.prompt || body.prompt.trim().length < 5) {
-      return NextResponse.json({ error: 'prompt or runId+brief required' }, { status: 400 });
+    if (!body.prompt) {
+      return NextResponse.json({ error: 'prompt required' }, { status: 400 });
     }
     const result = startRun({ prompt: body.prompt });
     log.info('run_started_legacy', { promptLength: body.prompt.length });
@@ -77,18 +80,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 400 });
   }
 }
-
-// Lazy import to avoid circular dependency with orchestrator/run.
-function startExistingRun(runId: string): { runId: string; status: 'queued' } {
-  // The orchestrator reads the run's brief_json from the DB and
-  // restarts the pipeline with the persisted context. Reuse startRun's
-  // path: it creates a new run if runId is unset, and resumes from
-  // the existing row when runId is provided (see run.ts).
-  return startRun({ runIdForResume: runId } as never);
-}
-
-interface CinestudioBriefShape {
-  id?: string;
-  logline?: string;
-}
-

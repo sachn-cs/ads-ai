@@ -1,10 +1,13 @@
 import { listEvents } from '@/src/db/events';
 import { getRun } from '@/src/db/runs';
 import { runBus } from '@/src/stream/bus';
+import { newRequestId, setCurrentRunId, setRequestId, clearRequestId, clearCurrentRunId, logger } from '@/src/lib/logger';
 import type { RunEvent } from '@/src/models';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+const log = logger('api/runs/stream');
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -15,6 +18,11 @@ export async function GET(request: Request) {
   }
   const run = getRun(id);
   if (!run) return new Response('run not found', { status: 404 });
+
+  const requestId = newRequestId();
+  setRequestId(requestId);
+  setCurrentRunId(id);
+  log.info('sse_connected', { runId: id, requestId });
 
   const since = Number(url.searchParams.get('since') ?? 0);
 
@@ -73,6 +81,8 @@ export async function GET(request: Request) {
         clearInterval(keepalive);
         clearInterval(terminalPoll);
         unsubscribe();
+        clearRequestId();
+        clearCurrentRunId();
         try {
           controller.close();
         } catch {
