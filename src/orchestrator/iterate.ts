@@ -32,7 +32,9 @@ async function callAgent<T extends ZodTypeAny>(
   cfg: TextProviderConfig,
   schema: T,
   userPrompt: string,
+  signal?: AbortSignal,
 ): Promise<unknown> {
+  if (signal?.aborted) throw new Error('aborted');
   const agent = new Agent({
     id: 'iteration-cycle-agent',
     description: 'Iteration cycle agent',
@@ -41,7 +43,7 @@ async function callAgent<T extends ZodTypeAny>(
     model: buildModel(cfg),
     printer: false,
   });
-  const result = await agent.invoke(userPrompt, { structuredOutputSchema: schema });
+  const result = await agent.invoke(userPrompt, { structuredOutputSchema: schema, cancelSignal: signal });
   return schema.parse(result.structuredOutput);
 }
 
@@ -64,6 +66,14 @@ function loadCritique(runId: string): unknown {
 export async function runIterationLoop(input: IterateInput): Promise<IterationCycleResult | { halted: true; reason: string }> {
   emit({ runId: input.runId, type: 'run_started', payload: { phase: 'iteration-loop' } });
   for (let i = 0; i < input.config.defaults.maxIterations; i++) {
+    if (input.abortSignal?.aborted) {
+      updateRun(input.runId, {
+        status: 'cancelled',
+        completed_at: new Date().toISOString(),
+      });
+      emit({ runId: input.runId, type: 'run_failed', payload: { reason: 'cancelled mid-loop' } });
+      return { halted: true, reason: 'cancelled' };
+    }
     const t = input.config.textProvider;
     const composite = loadLatestComposite(input.runId);
     const critique = loadCritique(input.runId);
@@ -76,6 +86,7 @@ export async function runIterationLoop(input: IterateInput): Promise<IterationCy
         `CRITIQUE:\n${JSON.stringify(critique, null, 2)}\n` +
         `COMPOSITE:\n${JSON.stringify(composite, null, 2)}\n` +
         'Produce an IterationControlReport. shouldContinue=false iff all shots are GO or cycleNumber == maxIterations.',
+      input.abortSignal,
     );
     const iterationReport = IterationControlReportSchema.parse(iterationReportRaw);
 
