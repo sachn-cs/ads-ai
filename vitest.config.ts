@@ -15,15 +15,24 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      include: ['src/**'],
       exclude: [
         'node_modules',
         'tests',
         'app',
         'components/ui',
+        'instrumentation.ts',
+        'middleware.ts',
         '**/*.config.{ts,mjs}',
         '**/types.ts',
         '**/migrate.ts',
       ],
+      thresholds: {
+        lines: 35,
+        functions: 35,
+        branches: 25,
+        statements: 35,
+      },
     },
   },
   resolve: {
