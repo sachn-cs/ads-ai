@@ -7,6 +7,7 @@ import { insertIdeaVariant } from '@/src/db/idea-variants';
 import { updateStatus } from '@/src/db/events';
 import { emit } from '@/src/stream/sinks';
 import { ProviderNotConfiguredError } from '@/src/lib/errors';
+import { IdeasExpandRequestSchema } from '@/src/lib/validation';
 import { logger } from '@/src/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -16,11 +17,24 @@ const log = logger('api/ideas/expand');
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { prompt?: string; count?: number };
-    if (!body.prompt || body.prompt.trim().length < 5) {
-      return NextResponse.json({ error: 'prompt must be at least 5 characters' }, { status: 400 });
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
     }
-    const config = loadConfig();
+    const parsed = IdeasExpandRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid request', issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
+    if (!body.prompt) {
+      return NextResponse.json({ error: 'prompt required' }, { status: 400 });
+    }
+    const config = loadConfig({ redact: false });
     if (!config.textProvider.enabled) {
       return NextResponse.json(
         { error: new ProviderNotConfiguredError(config.textProvider.provider).message },

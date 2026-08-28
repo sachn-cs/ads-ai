@@ -1,9 +1,8 @@
-import { Agent, tool } from '@strands-agents/sdk';
+import { tool } from '@strands-agents/sdk';
 import { TextBlock } from '@strands-agents/sdk';
 import path from 'node:path';
 import type { ShotRenderInstruction, ShotRenderResult } from '@/src/models';
 import { ShotRenderInstructionSchema } from '@/src/models';
-import { buildModel } from '@/src/providers/factory';
 import { renderWithVeo } from '@/src/providers/render/veo';
 import { renderWithSora } from '@/src/providers/render/sora';
 import { renderWithRunway } from '@/src/providers/render/runway';
@@ -153,6 +152,3 @@ function failed(
     metadata: { stub: false },
   };
 }
-
-void Agent;
-void buildModel;

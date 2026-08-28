@@ -3,6 +3,7 @@ import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import type { ShotRenderInstruction, ShotRenderResult } from '@/src/models';
 import { logger } from '@/src/lib/logger';
 import { writeJson } from '@/src/lib/artifacts';
+import { sanitizePathSegment } from '@/src/lib/path';
 import path from 'node:path';
 import { mkdir, stat } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -45,7 +46,8 @@ export async function renderWithSora(
   }
 
   const startedAt = new Date();
-  const logPath = path.join(cfg.artifactDir, 'logs', `sora-${instruction.shotId}.json`);
+  const safeShotId = sanitizePathSegment(instruction.shotId, 'shot');
+  const logPath = path.join(cfg.artifactDir, 'logs', `sora-${safeShotId}.json`);
 
   try {
     const client = new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseUrl });
@@ -76,7 +78,7 @@ export async function renderWithSora(
       polls += 1;
     }
 
-    const fileName = await downloadSoraVideo(client, video.id, instruction.shotId, cfg.artifactDir);
+    const fileName = await downloadSoraVideo(client, video.id, safeShotId, cfg.artifactDir);
     const fileSize = await stat(fileName).then((s) => s.size).catch(() => 0);
 
     writeJson(logPath, {

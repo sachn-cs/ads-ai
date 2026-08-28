@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { logger } from '@/src/lib/logger';
+import { sanitizePathSegment } from '@/src/lib/path';
 import { authHeaders, miniMaxFetch, MiniMaxError, readStringField } from './shared';
 
 const log = logger('providers/minimax/video');
@@ -121,7 +122,7 @@ export async function downloadMiniMaxVideo(
 ): Promise<{ path: string; bytes: number }> {
   const rendersDir = path.join(cfg.artifactDir, 'renders');
   await mkdir(rendersDir, { recursive: true });
-  const outPath = path.join(rendersDir, `${shotId}.mp4`);
+  const outPath = path.join(rendersDir, `${sanitizePathSegment(shotId, 'shot')}.mp4`);
   const response = await fetch(videoUrl);
   if (!response.ok || !response.body) {
     throw new Error(`MiniMax video download failed: ${response.status} ${response.statusText}`);

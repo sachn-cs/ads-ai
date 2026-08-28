@@ -44,7 +44,17 @@ export async function runCinestudioPipeline(input: RunGraphInput): Promise<{
       invocationState: { runId, config, userPrompt: prompt },
       cancelSignal: abortSignal,
     });
+    if (abortSignal?.aborted) {
+      updateStatus(runId, 'cancelled');
+      emit({ runId, type: 'run_failed', payload: { reason: 'cancelled mid-graph' } });
+      return { status: 'failed', graphResult: null, iterationResult: null };
+    }
   } catch (err) {
+    if (abortSignal?.aborted) {
+      updateStatus(runId, 'cancelled');
+      emit({ runId, type: 'run_failed', payload: { reason: 'cancelled mid-graph' } });
+      return { status: 'failed', graphResult: null, iterationResult: null };
+    }
     log.error('main_pipeline_failed', { runId, err: String(err) });
     updateStatus(runId, 'failed');
     emit({ runId, type: 'run_failed', payload: { phase: 'main-pipeline', err: String(err) } });
