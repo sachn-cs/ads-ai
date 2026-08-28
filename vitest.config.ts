@@ -40,7 +40,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
       '@/app': path.resolve(__dirname, 'app'),
       '@/components': path.resolve(__dirname, 'components'),
-      '@/lib': path.resolve(__dirname, 'lib'),
+      '@/lib': path.resolve(__dirname, 'src/lib'),
       '@/src': path.resolve(__dirname, 'src'),
     },
   },

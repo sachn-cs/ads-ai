@@ -38,7 +38,7 @@
         "./components/*"
       ],
       "@/lib/*": [
-        "./lib/*"
+        "./src/lib/*"
       ],
       "@/src/*": [
         "./src/*"
