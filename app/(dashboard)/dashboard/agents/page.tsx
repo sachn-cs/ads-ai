@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bot, Activity, ShieldAlert } from 'lucide-react';
+import { Bot, ShieldAlert } from 'lucide-react';
 import { listProductions } from '@/src/db/productions';
 import { getDb } from '@/src/db/client';
 import { listAgentStatesForRun } from '@/src/db/agent-state';
@@ -45,99 +45,99 @@ export default function AgentsOverviewPage() {
     .sort((a, b) => b.count - a.count);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 animate-fade-in">
-      <header className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.2em] text-gold">Agents</p>
-        <h1 className="font-display text-3xl">System health</h1>
-        <p className="text-sm text-muted-foreground">
-          Cross-production view of every agent — execution count, failure rate, average confidence, warnings.
-        </p>
+    <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3 animate-fade-in">
+      <header className="flex items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Agents</p>
+          <h1 className="font-display text-2xl font-semibold leading-tight">System health</h1>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <KPI label="Productions" value={String(productions.length)} />
+          <KPI label="Recent runs" value={String(recentRuns.length)} />
+          <KPI label="Warnings" value={String(totalWarnings)} />
+        </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <KPI label="Productions" value={String(productions.length)} />
-        <KPI label="Recent runs" value={String(recentRuns.length)} />
-        <KPI label="Total warnings" value={String(totalWarnings)} />
-      </section>
+      <section className="grid flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-3">
+        <Card className="warm-shadow lg:col-span-2 h-full">
+          <CardHeader className="space-y-0 px-3 py-2">
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              <Bot className="h-3.5 w-3.5 text-gold" />
+              Agent activity
+            </CardTitle>
+            <CardDescription className="text-[10px]">{rows.length} agent{rows.length === 1 ? '' : 's'}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-3 pb-2">
+            {rows.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No agent executions recorded yet.</p>
+            ) : (
+              <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <th className="py-1 text-left">Agent</th>
+                      <th className="py-1 text-right">Executions</th>
+                      <th className="py-1 text-right">Failures</th>
+                      <th className="py-1 text-right">Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.agentId} className="border-b border-border last:border-0">
+                        <td className="py-1 font-mono">{r.agentId}</td>
+                        <td className="py-1 text-right">{r.count}</td>
+                        <td className="py-1 text-right">
+                          <Badge variant={r.failed > 0 ? 'destructive' : 'outline'} className="px-1.5 py-0 text-[10px]">
+                            {r.failed}
+                          </Badge>
+                        </td>
+                        <td className="py-1 text-right">{(r.avgConfidence * 100).toFixed(0)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card className="warm-shadow">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-gold" />
-            Agent activity
-          </CardTitle>
-          <CardDescription>{rows.length} agent{rows.length === 1 ? '' : 's'} with recorded state.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No agent executions recorded yet.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="py-2 text-left">Agent</th>
-                  <th className="py-2 text-right">Executions</th>
-                  <th className="py-2 text-right">Failures</th>
-                  <th className="py-2 text-right">Avg confidence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.agentId} className="border-b border-border last:border-0">
-                    <td className="py-2 font-mono">{r.agentId}</td>
-                    <td className="py-2 text-right">{r.count}</td>
-                    <td className="py-2 text-right">
-                      <Badge variant={r.failed > 0 ? 'destructive' : 'outline'}>{r.failed}</Badge>
-                    </td>
-                    <td className="py-2 text-right">{(r.avgConfidence * 100).toFixed(0)}%</td>
-                  </tr>
+        <Card className="warm-shadow h-full">
+          <CardHeader className="space-y-0 px-3 py-2">
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-warm" />
+              Per-production agents
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-2">
+            {productions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No productions yet.</p>
+            ) : (
+              <ul className="max-h-[calc(100vh-220px)] space-y-1 overflow-y-auto">
+                {productions.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/dashboard/productions/${p.id}/agents`}
+                      className="flex items-center justify-between rounded-md px-2 py-1 text-xs hover:bg-secondary"
+                    >
+                      <span className="truncate text-bone">{p.title}</span>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px]">Open</Badge>
+                    </Link>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="warm-shadow">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-amber-warm" />
-            Per-production agents
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {productions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No productions yet.</p>
-          ) : (
-            <ul className="space-y-1">
-              {productions.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/dashboard/productions/${p.id}/agents`}
-                    className="flex items-center justify-between rounded-md px-2 py-1 hover:bg-secondary"
-                  >
-                    <span className="truncate text-sm text-bone">{p.title}</span>
-                    <Badge variant="outline">
-                      <Activity className="mr-1 h-3 w-3" /> Open
-                    </Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
 
 function KPI({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="warm-shadow">
-      <CardContent className="space-y-1 p-4">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="font-display text-2xl text-gold">{value}</p>
-      </CardContent>
-    </Card>
+    <div className="flex items-baseline gap-1.5 rounded-md border border-border bg-card/40 px-2 py-1">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="font-display text-base text-gold">{value}</span>
+    </div>
   );
 }
