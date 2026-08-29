@@ -4,24 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export function GapList({ productionId }: { productionId: string | null }) {
   return (
-    <Card className="warm-shadow">
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ListChecks className="h-4 w-4 text-gold" />
-          Unresolved gaps
+    <Card className="warm-shadow h-full">
+      <CardHeader className="space-y-0 px-3 py-2">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <ListChecks className="h-3.5 w-3.5 text-gold" /> Unresolved gaps
         </CardTitle>
-        <CardDescription>Continuity, wardrobe, and scene-level fixes needed.</CardDescription>
+        <CardDescription className="text-[10px]">Continuity, wardrobe, scene</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 pb-2">
         {productionId ? (
           <Link
             href={`/dashboard/productions/${productionId}/continuity`}
-            className="text-sm text-gold hover:underline"
+            className="text-xs text-gold hover:underline"
           >
             View continuity →
           </Link>
         ) : (
-          <p className="text-sm text-muted-foreground">No production selected.</p>
+          <p className="text-xs text-muted-foreground">—</p>
         )}
       </CardContent>
     </Card>

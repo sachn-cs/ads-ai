@@ -11,36 +11,34 @@ export function ContinuityWarningsPanel({
   totalUnresolved: number;
 }) {
   return (
-    <Card className="warm-shadow">
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-        <div className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldAlert className="h-4 w-4 text-amber-warm" />
+    <Card className="warm-shadow h-full">
+      <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 px-3 py-2">
+        <div className="min-w-0">
+          <CardTitle className="flex items-center gap-1.5 text-sm">
+            <ShieldAlert className="h-3.5 w-3.5 text-amber-warm" />
             Continuity warnings
           </CardTitle>
-          <CardDescription>
-            {totalUnresolved} unresolved across {totals.length} production{totals.length === 1 ? '' : 's'}.
-          </CardDescription>
+          <CardDescription className="text-[10px]">{totalUnresolved} open across {totals.length} production{totals.length === 1 ? '' : 's'}.</CardDescription>
         </div>
-        <Badge variant="outline" className="border-amber-warm/40 text-amber-warm">
-          {totalUnresolved} open
+        <Badge variant="outline" className="shrink-0 border-amber-warm/40 px-1.5 py-0 text-[10px] text-amber-warm">
+          {totalUnresolved}
         </Badge>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 pb-2">
         {totals.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No productions yet.</p>
+          <p className="text-xs text-muted-foreground">No productions yet.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {totals.slice(0, 5).map((t) => (
-              <li key={t.productionId} className="flex items-center justify-between py-2 text-sm">
+            {totals.slice(0, 4).map((t) => (
+              <li key={t.productionId} className="flex items-center justify-between py-1 text-xs">
                 <Link
                   href={`/dashboard/productions/${t.productionId}/continuity`}
                   className="truncate text-bone hover:text-gold"
                 >
                   {t.title}
                 </Link>
-                <Badge variant={t.unresolved > 0 ? 'destructive' : 'outline'}>
-                  {t.unresolved} gap{t.unresolved === 1 ? '' : 's'}
+                <Badge variant={t.unresolved > 0 ? 'destructive' : 'outline'} className="px-1.5 py-0 text-[10px]">
+                  {t.unresolved}
                 </Badge>
               </li>
             ))}

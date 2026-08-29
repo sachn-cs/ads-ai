@@ -4,24 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export function CharacterAlertsPanel({ productionId }: { productionId: string | null }) {
   return (
-    <Card className="warm-shadow">
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="h-4 w-4 text-gold" />
-          Character consistency alerts
+    <Card className="warm-shadow h-full">
+      <CardHeader className="space-y-0 px-3 py-2">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <Users className="h-3.5 w-3.5 text-gold" /> Character alerts
         </CardTitle>
-        <CardDescription>Wardrobe, posture, and visual-marker drift.</CardDescription>
+        <CardDescription className="text-[10px]">Wardrobe + marker drift</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 pb-2">
         {productionId ? (
           <Link
             href={`/dashboard/productions/${productionId}/characters`}
-            className="text-sm text-gold hover:underline"
+            className="text-xs text-gold hover:underline"
           >
             Open Characters →
           </Link>
         ) : (
-          <p className="text-sm text-muted-foreground">No production selected.</p>
+          <p className="text-xs text-muted-foreground">—</p>
         )}
       </CardContent>
     </Card>

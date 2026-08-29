@@ -1,33 +1,31 @@
 import Link from 'next/link';
 import { History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { RunRow } from '@/src/db/runs';
 
-export function RevisionTimeline({ runs }: { runs: RunRow[] }) {
+export function RevisionTimeline({ runs }: { runs: { id: string; title: string | null; prompt: string; production_id: string | null; created_at: string }[] }) {
   return (
-    <Card className="warm-shadow">
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <History className="h-4 w-4 text-gold" />
-          Recent revisions
+    <Card className="warm-shadow h-full">
+      <CardHeader className="space-y-0 px-3 py-2">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <History className="h-3.5 w-3.5 text-gold" /> Recent revisions
         </CardTitle>
-        <CardDescription>Last 8 runs across productions.</CardDescription>
+        <CardDescription className="text-[10px]">{runs.length} runs</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 pb-2">
         {runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No revisions yet.</p>
+          <p className="text-xs text-muted-foreground">—</p>
         ) : (
-          <ul className="space-y-2">
-            {runs.map((r) => (
-              <li key={r.id} className="flex items-center justify-between text-sm">
+          <ul className="space-y-1">
+            {runs.slice(0, 4).map((r) => (
+              <li key={r.id} className="flex items-center justify-between text-xs">
                 <Link
                   href={`/dashboard/productions/${r.production_id ?? ''}/runs/${r.id}`}
                   className="truncate text-bone hover:text-gold"
                 >
-                  {r.title ?? r.prompt.slice(0, 60)}
+                  {r.title ?? r.prompt.slice(0, 40)}
                 </Link>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(r.created_at).toLocaleString()}
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {new Date(r.created_at).toLocaleTimeString()}
                 </span>
               </li>
             ))}
