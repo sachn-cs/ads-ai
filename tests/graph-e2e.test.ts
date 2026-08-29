@@ -185,6 +185,8 @@ vi.mock('@/src/agents/story-analyst', () => ({ invokeStoryAnalyst: vi.fn(async (
 vi.mock('@/src/agents/costume-designer', () => ({ invokeCostumeDesigner: vi.fn(async () => ({ characters: [] })) }));
 vi.mock('@/src/agents/environment-designer', () => ({ invokeEnvironmentDesigner: vi.fn(async () => ({ locations: [] })) }));
 vi.mock('@/src/agents/scene-composer', () => ({ invokeSceneComposer: vi.fn(async () => ({ scenes: [] })) }));
+vi.mock('@/src/agents/scene-editor', () => ({ invokeSceneEditor: vi.fn(async () => ({ revisions: [] })) }));
+vi.mock('@/src/agents/cinematographer', () => ({ invokeCinematographer: vi.fn(async () => ({ scenes: [] })) }));
 vi.mock('@/src/agents/continuity-supervisor', () => ({ invokeContinuitySupervisor: vi.fn(async () => ({ entries: [] })) }));
 vi.mock('@/src/agents/transition-designer', () => ({ invokeTransitionDesigner: vi.fn(async () => ({ transitions: [] })) }));
 vi.mock('@/src/agents/pacing-analyst', () => ({ invokePacingAnalyst: vi.fn(async () => ({ scenes: [], warnings: [] })) }));
