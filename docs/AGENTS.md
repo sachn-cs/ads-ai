@@ -13,8 +13,10 @@
 | CostumeDesigner | `src/agents/costume-designer.ts` | Wardrobe intent + variants + continuity rules. | CharacterCast | CostumeRevision |
 | EnvironmentDesigner | `src/agents/environment-designer.ts` | Location texture, weather, props, depth. | WorldDesign | EnvironmentRevision |
 | ScriptWriter | `src/agents/script-writer.ts` | Beats + dialogue. | CinestudioBrief + ScriptBreakdown | ScriptBreakdown |
+| SceneEditor | `src/agents/scene-editor.ts` | Per-scene rewrite specialist (cause/effect, beat density). | ScriptBreakdown | SceneRevisions |
 | SceneComposer | `src/agents/scene-composer.ts` | Break script into scenes. | ScriptBreakdown | SceneList |
 | ShotPlanner | `src/agents/shot-planner.ts` | Shot list with framing + lens + movement. | Storyboard | Storyboard |
+| Cinematographer | `src/agents/cinematographer.ts` | Owns camera language (lens vocabulary, movement, depth cues, focus pulls, framing rules). | Storyboard | CinematographyPlan |
 | ContinuitySupervisor | `src/agents/continuity-supervisor.ts` | Fan-out: continuity + transition + pacing + visual quality. | Storyboard | SupervisorReport |
 | ContinuityChecker | `src/agents/continuity-checker.ts` | Per-shot continuity issues. | CinestudioBrief + Storyboard | ContinuityIssue[] |
 | TransitionDesigner | `src/agents/transition-designer.ts` | Per-cut transition type + intent. | Storyboard | TransitionPlan |
