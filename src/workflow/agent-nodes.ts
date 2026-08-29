@@ -93,6 +93,7 @@ import {
   invokeProductionCoordinator,
   type CoordinatorReport,
 } from '@/src/agents/production-coordinator';
+import { invokeCinematographer, type CinematographyPlan } from '@/src/agents/cinematographer';
 
 function read<T>(app: StateStore, key: string): T {
   const v = app.get(key);
@@ -196,6 +197,15 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     invoke: async (_state, app) =>
       invokeVisualQualityReviewer(t, read<Storyboard>(app, 'storyboard'), read<StyleGuide>(app, 'styleGuide')),
     persistKey: 'visualQualityReport',
+  });
+
+  const cinematographer = new AgentNode<CinematographyPlan>({
+    id: 'cinematographer',
+    description: 'Cinematographer (lens + camera language).',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeCinematographer(t, read<Storyboard>(app, 'storyboard')),
+    persistKey: 'cinematographyPlan',
   });
 
   const productionCoordinator = new AgentNode<CoordinatorReport>({
@@ -508,6 +518,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     worldBuilder,
     storyboardArtist,
     shotPlanner,
+    cinematographer,
     continuitySupervisor,
     transitionDesigner,
     pacingAnalyst,
