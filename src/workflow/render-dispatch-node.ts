@@ -2,7 +2,6 @@ import {
   Node,
   type MultiAgentState,
   type NodeConfig,
-  type NodeDefinition,
   type NodeResultUpdate,
   type MultiAgentStreamEvent,
   type MultiAgentInput,
@@ -29,8 +28,12 @@ function readTextProvider(app: StateStore): TextProviderConfig {
   return v;
 }
 
-function readRenderProviders(app: StateStore): Record<'veo' | 'sora' | 'runway', RenderProviderConfig> {
-  const v = app.get('renderProviders') as Record<'veo' | 'sora' | 'runway', RenderProviderConfig> | undefined;
+function readRenderProviders(
+  app: StateStore,
+): Record<'veo' | 'sora' | 'runway' | 'minimax', RenderProviderConfig> {
+  const v = app.get('renderProviders') as
+    | Record<'veo' | 'sora' | 'runway' | 'minimax', RenderProviderConfig>
+    | undefined;
   if (!v) throw new Error('RenderDispatchNode requires renderProviders in app state.');
   return v;
 }
@@ -150,5 +153,4 @@ export class RenderDispatchNode extends Node {
   }
 }
 
-void ({} as NodeDefinition);
 export const RENDER_DISPATCH_ID = NODE_ID;

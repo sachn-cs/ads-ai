@@ -6,10 +6,8 @@ export * as characterDesigner from './character-designer';
 export * as worldBuilder from './world-builder';
 export * as storyboard from './storyboard';
 export * as shotPlanner from './shot-planner';
-export * as renderDispatcher from './render-dispatcher';
 export * as continuityChecker from './continuity-checker';
 export * as critique from './critique';
-export * as iteration from './iteration-controller';
 export * as scoring from './scoring';
 export * as editor from './editor';
 export * as colorist from './colorist';
@@ -31,7 +29,6 @@ export const AGENT_IDS = [
   'render_dispatcher',
   'continuity_checker',
   'critique',
-  'iteration_controller',
   'scoring',
   'editor',
   'colorist',

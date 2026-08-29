@@ -37,7 +37,7 @@ export function emit(opts: EmitOptions): void {
 
 export function emitAgentOutput(
   runId: string,
-  agentId: AgentId,
+  agentId: string,
   output: unknown,
   durationMs?: number,
 ): void {

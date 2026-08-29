@@ -7,7 +7,7 @@ import type { RunStatusEnum as RunStatusEnumType } from '@/src/models';
 
 type RunStatus = z.infer<typeof RunStatusEnumType>;
 
-export function recordAgentOutput(runId: string, agentId: AgentId, output: unknown, durationMs?: number): void {
+export function recordAgentOutput(runId: string, agentId: string, output: unknown, durationMs?: number): void {
   getDb()
     .prepare(
       `INSERT INTO agent_outputs (run_id, agent_id, output_json, duration_ms, created_at) VALUES (?, ?, ?, ?, ?)`,
@@ -36,7 +36,7 @@ export function listEvents(runId: string, since: number = 0): { id: number; ts: 
   }));
 }
 
-export function listAgentOutputs(runId: string, agentId?: AgentId): { id: number; cycle: number; output: unknown; createdAt: string }[] {
+export function listAgentOutputs(runId: string, agentId?: string): { id: number; cycle: number; output: unknown; createdAt: string }[] {
   const params: unknown[] = [runId];
   let query = 'SELECT id, cycle, output_json, created_at AS createdAt FROM agent_outputs WHERE run_id = ?';
   if (agentId) {

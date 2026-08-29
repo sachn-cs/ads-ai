@@ -8,6 +8,7 @@ const log = logger('orchestrator/run');
 
 export interface StartRunInput {
   prompt?: string;
+  productionId: string;
   runIdForResume?: string;
 }
 
@@ -20,6 +21,9 @@ const inflight = new Map<string, Promise<unknown>>();
 const abortControllers = new Map<string, AbortController>();
 
 export function startRun(input: StartRunInput): StartRunResult {
+  if (!input.productionId) {
+    throw new Error('productionId is required to start a run.');
+  }
   let runId: string;
   let prompt: string;
 
@@ -33,7 +37,7 @@ export function startRun(input: StartRunInput): StartRunResult {
     if (!input.prompt || input.prompt.trim().length < 5) {
       throw new Error('Prompt must be at least 5 characters.');
     }
-    runId = createRun(input.prompt);
+    runId = createRun(input.prompt, input.productionId);
     prompt = input.prompt;
   }
 
@@ -47,7 +51,7 @@ export function startRun(input: StartRunInput): StartRunResult {
       if (!config.textProvider.enabled) {
         throw new ProviderNotConfiguredError(config.textProvider.provider);
       }
-      log.info('run_started', { runId, promptLength: prompt.length });
+      log.info('run_started', { runId, productionId: input.productionId, promptLength: prompt.length });
       const result = await runCinestudioPipeline({
         runId,
         prompt,

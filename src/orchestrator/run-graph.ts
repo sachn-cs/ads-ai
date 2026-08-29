@@ -5,7 +5,6 @@ import { updateStatus } from '@/src/db/events';
 import { emit } from '@/src/stream/sinks';
 import { runDir, writeJson } from '@/src/lib/artifacts';
 import { safeJsonStringify } from '@/src/lib/json';
-import { setAgentFactoryContext } from '@/src/agents/factory';
 import { getSessionManager } from '@/src/workflow/strands';
 import path from 'node:path';
 import { logger } from '@/src/lib/logger';
@@ -31,10 +30,9 @@ export async function runCinestudioPipeline(input: RunGraphInput): Promise<{
   emit({ runId, type: 'run_started', payload: { phase: 'main-pipeline' } });
   updateStatus(runId, 'running');
 
-  // Eagerly create the SessionManager + set the factory context so all
-  // agents built during graph construction share the same session.
+  // Eagerly create the SessionManager so all agents built during graph
+  // construction share the same session.
   getSessionManager(runId);
-  setAgentFactoryContext(runId);
 
   const graph = buildCinestudioGraph(config, prompt, runId);
 

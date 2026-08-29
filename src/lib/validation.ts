@@ -88,10 +88,15 @@ export const CreateRunRequestSchema = z
     prompt: PromptSchema.optional(),
     runId: z.string().min(1).max(64).optional(),
     brief: z.unknown().optional(),
+    productionId: z.string().min(1).optional(),
   })
   .refine(
     (b) => Boolean(b.prompt) || Boolean(b.runId),
     { message: 'either prompt or runId required' },
+  )
+  .refine(
+    (b) => Boolean(b.productionId),
+    { message: 'productionId required' },
   );
 
 export const IdeasExpandRequestSchema = z.object({

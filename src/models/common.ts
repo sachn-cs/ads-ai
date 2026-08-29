@@ -32,7 +32,7 @@ export const GenreEnum = z.enum([
 ]);
 export type Genre = z.infer<typeof GenreEnum>;
 
-export const RenderProviderEnum = z.enum(['veo', 'sora', 'runway']);
+export const RenderProviderEnum = z.enum(['veo', 'sora', 'runway', 'minimax']);
 export type RenderProvider = z.infer<typeof RenderProviderEnum>;
 
 export const ShotTypeEnum = z.enum([

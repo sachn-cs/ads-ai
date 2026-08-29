@@ -1,40 +1,36 @@
-import { tool } from '@strands-agents/sdk';
-import { TextBlock } from '@strands-agents/sdk';
 import path from 'node:path';
 import type { ShotRenderInstruction, ShotRenderResult } from '@/src/models';
-import { ShotRenderInstructionSchema } from '@/src/models';
 import { renderWithVeo } from '@/src/providers/render/veo';
 import { renderWithSora } from '@/src/providers/render/sora';
 import { renderWithRunway } from '@/src/providers/render/runway';
+import { renderWithMiniMaxVideo } from '@/src/providers/minimax/video';
 import type { TextProviderConfig, RenderProviderConfig } from '@/src/types';
 import { logger } from '@/src/lib/logger';
 import { runDir } from '@/src/lib/artifacts';
 
 const log = logger('agents/render-dispatcher');
 
-export const renderDispatcherSpec = {
-  id: 'render_dispatcher',
-  description: 'Dispatches a single ShotRenderInstruction to the configured provider and returns ShotRenderResult.',
-};
-
-const SUPPORTED_PROVIDERS = ['veo', 'sora', 'runway'] as const;
+const SUPPORTED_PROVIDERS = ['veo', 'sora', 'runway', 'minimax'] as const;
 type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number];
 
 export interface DispatcherInputs {
   shotBatches: unknown;
   textProvider: TextProviderConfig;
-  renderProviders: Record<'veo' | 'sora' | 'runway', RenderProviderConfig>;
+  renderProviders: Record<'veo' | 'sora' | 'runway' | 'minimax', RenderProviderConfig>;
   runId: string;
   artifactDir?: string;
 }
 
 function artifactDirFor(runId: string): string {
-  return runDir(path.resolve(process.cwd(), process.env.CINESTUDIO_ARTIFACT_DIR || './artifacts'), runId);
+  return runDir(
+    path.resolve(process.cwd(), process.env.CINESTUDIO_ARTIFACT_DIR || './artifacts'),
+    runId,
+  );
 }
 
 export async function invokeRenderDispatcher(
   textCfg: TextProviderConfig,
-  renderProviders: Record<'veo' | 'sora' | 'runway', RenderProviderConfig>,
+  renderProviders: Record<'veo' | 'sora' | 'runway' | 'minimax', RenderProviderConfig>,
   instruction: ShotRenderInstruction,
   runId: string,
 ): Promise<ShotRenderResult> {
@@ -109,29 +105,51 @@ export async function invokeRenderDispatcher(
         },
         instruction,
       );
+    case 'minimax':
+      return renderWithMiniMaxVideo(
+        {
+          apiKey: providerCfg.apiKey,
+          baseUrl: providerCfg.baseUrl,
+          model: providerCfg.model,
+          artifactDir,
+        },
+        {
+          shotId: instruction.shotId,
+          prompt: instruction.prompt,
+          ratio: instruction.aspectRatio,
+          duration: instruction.durationSeconds,
+          resolution: instruction.resolution,
+          firstFrame: instruction.firstFrame,
+          lastFrame: instruction.lastFrame,
+          referenceImages: instruction.referenceImages,
+          referenceVideos: instruction.referenceVideos,
+          referenceAudios: instruction.referenceAudios,
+        },
+      ).then((r) =>
+        r.status === 'succeeded'
+          ? ({
+              shotId: instruction.shotId,
+              provider: 'minimax',
+              status: 'completed',
+              videoPath: r.videoUrl ?? undefined,
+              durationSeconds: instruction.durationSeconds,
+              modelUsed: r.model,
+              attempts: 1,
+              completedAt: new Date().toISOString(),
+              metadata: { taskId: r.taskId },
+            } satisfies ShotRenderResult)
+          : ({
+              shotId: instruction.shotId,
+              provider: 'minimax',
+              status: 'failed',
+              errorMessage: r.error ?? `MiniMax returned status=${r.status}`,
+              attempts: 1,
+              metadata: { taskId: r.taskId },
+            } satisfies ShotRenderResult),
+      );
     default:
       return failed(instruction, instruction.provider, 'unreachable');
   }
-}
-
-export function makeRenderTool(textCfg: TextProviderConfig) {
-  return tool({
-    name: 'dispatch_shot_render',
-    description:
-      'Dispatch a single shot render to the configured video provider. Returns ShotRenderResult.',
-    inputSchema: ShotRenderInstructionSchema,
-    callback: async (input, ctx) => {
-      const instruction = input as unknown as ShotRenderInstruction;
-      const runId = (ctx?.invocationState as { runId?: string } | undefined)?.runId ?? 'unknown';
-      const providers = (ctx?.invocationState as { renderProviders?: Record<'veo' | 'sora' | 'runway', RenderProviderConfig> } | undefined)
-        ?.renderProviders;
-      if (!providers) {
-        return failed(instruction, instruction.provider, 'renderProviders missing from invocationState');
-      }
-      const result = await invokeRenderDispatcher(textCfg, providers, instruction, runId);
-      return new TextBlock(`Shot ${instruction.shotId} render result: ${result.status}` + (result.errorMessage ? ` — ${result.errorMessage}` : ''));
-    },
-  });
 }
 
 function isSupportedProvider(p: string): p is SupportedProvider {

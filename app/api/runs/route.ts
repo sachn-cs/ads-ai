@@ -65,14 +65,14 @@ export async function POST(request: NextRequest) {
           title: variant.brief?.logline?.slice(0, 80),
         });
       }
-      const result = startRun({ runIdForResume: body.runId });
+      const result = startRun({ runIdForResume: body.runId, productionId: body.productionId ?? existing.production_id ?? '' });
       return NextResponse.json(result, { status: 202 });
     }
 
     if (!body.prompt) {
       return NextResponse.json({ error: 'prompt required' }, { status: 400 });
     }
-    const result = startRun({ prompt: body.prompt });
+    const result = startRun({ prompt: body.prompt, productionId: body.productionId ?? '' });
     log.info('run_started_legacy', { promptLength: body.prompt.length });
     return NextResponse.json(result, { status: 202 });
   } catch (err) {

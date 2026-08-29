@@ -181,6 +181,15 @@ vi.mock('@/src/agents/style-guide', () => ({
 }));
 vi.mock('@/src/agents/critique', () => ({ invokeCritique: vi.fn(async () => MOCK_CRITIQUE) }));
 vi.mock('@/src/agents/iteration-controller', () => ({ invokeIterationController: vi.fn(async () => MOCK_ITERATION) }));
+vi.mock('@/src/agents/story-analyst', () => ({ invokeStoryAnalyst: vi.fn(async () => ({ themes: [], beats: [], references: [], structuralNotes: 'mock' })) }));
+vi.mock('@/src/agents/costume-designer', () => ({ invokeCostumeDesigner: vi.fn(async () => ({ characters: [] })) }));
+vi.mock('@/src/agents/environment-designer', () => ({ invokeEnvironmentDesigner: vi.fn(async () => ({ locations: [] })) }));
+vi.mock('@/src/agents/scene-composer', () => ({ invokeSceneComposer: vi.fn(async () => ({ scenes: [] })) }));
+vi.mock('@/src/agents/continuity-supervisor', () => ({ invokeContinuitySupervisor: vi.fn(async () => ({ entries: [] })) }));
+vi.mock('@/src/agents/transition-designer', () => ({ invokeTransitionDesigner: vi.fn(async () => ({ transitions: [] })) }));
+vi.mock('@/src/agents/pacing-analyst', () => ({ invokePacingAnalyst: vi.fn(async () => ({ scenes: [], warnings: [] })) }));
+vi.mock('@/src/agents/visual-quality-reviewer', () => ({ invokeVisualQualityReviewer: vi.fn(async () => ({ shots: [], issues: [] })) }));
+vi.mock('@/src/agents/production-coordinator', () => ({ invokeProductionCoordinator: vi.fn(async () => ({ blockingIssues: [], unresolvedDependencies: [], nextBestAction: 'continue' })) }));
 vi.mock('@/src/agents/scoring', () => ({ invokeScoring: vi.fn(async () => MOCK_COMPOSITE) }));
 vi.mock('@/src/agents/editor', () => ({ invokeEditor: vi.fn(async () => MOCK_ASSEMBLY) }));
 vi.mock('@/src/agents/colorist', () => ({ invokeColorist: vi.fn(async () => MOCK_COLOR) }));

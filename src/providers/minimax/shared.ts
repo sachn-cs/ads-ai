@@ -1,6 +1,3 @@
-export const MINIMAX_BASE_URL = 'https://api.minimax.io';
-export const MINIMAX_TEXT_BASE_URL = 'https://api.minimax.io/anthropic';
-
 export interface MiniMaxBaseConfig {
   apiKey: string;
   baseUrl?: string;

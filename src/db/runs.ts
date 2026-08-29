@@ -21,16 +21,18 @@ export interface RunRow {
   updated_at: string;
   completed_at: string | null;
   artifacts_json: string;
+  production_id: string | null;
 }
 
-export function createRun(prompt: string): string {
+export function createRun(prompt: string, productionId?: string | null): string {
   const id = ulid();
   const now = new Date().toISOString();
   getDb()
     .prepare(
-      `INSERT INTO runs (id, status, prompt, created_at, updated_at, artifacts_json) VALUES (?, ?, ?, ?, ?, '[]')`,
+      `INSERT INTO runs (id, status, prompt, production_id, created_at, updated_at, artifacts_json)
+       VALUES (?, ?, ?, ?, ?, ?, '[]')`,
     )
-    .run(id, 'queued', prompt, now, now);
+    .run(id, 'queued', prompt, productionId ?? null, now, now);
   return id;
 }
 

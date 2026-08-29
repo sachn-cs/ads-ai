@@ -26,43 +26,11 @@ interface ProviderPreset {
 const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'minimax',
-    label: 'MiniMax (recommended)',
+    label: 'MiniMax',
     model: 'MiniMax-M3',
     needsApiKey: true,
     defaultBaseUrl: 'https://api.minimax.io/anthropic',
     hint: 'One MiniMax API key covers text, video (MiniMax-H3), image (image-01), speech (speech-2.8-hd), and music (music-3.0).',
-  },
-  {
-    id: 'bedrock',
-    label: 'Amazon Bedrock',
-    model: 'global.anthropic.claude-sonnet-4-6',
-    needsApiKey: false,
-    hint: 'Uses AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (or IAM role).',
-  },
-  {
-    id: 'anthropic',
-    label: 'Anthropic (direct)',
-    model: 'claude-sonnet-4-6',
-    needsApiKey: true,
-  },
-  {
-    id: 'openai',
-    label: 'OpenAI',
-    model: 'gpt-5',
-    needsApiKey: true,
-  },
-  {
-    id: 'google',
-    label: 'Google Gemini',
-    model: 'gemini-2.5-pro',
-    needsApiKey: true,
-  },
-  {
-    id: 'ollama',
-    label: 'Ollama (local)',
-    model: 'qwen3:32b',
-    needsApiKey: false,
-    defaultBaseUrl: 'http://localhost:11434',
   },
 ];
 
@@ -195,7 +163,7 @@ export default function OnboardingSetup() {
           model,
           apiKey: apiKey || undefined,
           baseUrl: baseUrl || undefined,
-          region: textProvider === 'bedrock' ? region : undefined,
+          region: undefined,
           temperature: 0.7,
           maxTokens: 8192,
         },
@@ -279,12 +247,6 @@ export default function OnboardingSetup() {
               <Label htmlFor="text-model">Model</Label>
               <Input id="text-model" value={model} onChange={(e) => setModel(e.target.value)} />
             </div>
-            {textProvider === 'bedrock' && (
-              <div className="space-y-2">
-                <Label htmlFor="region">Region</Label>
-                <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} />
-              </div>
-            )}
             {preset?.needsApiKey && (
               <div className="space-y-2">
                 <Label htmlFor="api-key">API key</Label>

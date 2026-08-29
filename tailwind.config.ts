@@ -1,8 +1,9 @@
 import type { Config } from 'tailwindcss';
 import animate from 'tailwindcss-animate';
+import { ink, bone, gold, amber, crimson, fonts } from './src/lib/design/tokens';
 
 const config: Config = {
-  darkMode: ['class'],
+  darkMode: 'class',
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -50,12 +51,11 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        cinematic: {
-          gold: '#d4af37',
-          reel: '#1a1a1a',
-          film: '#0a0a0a',
-          cell: '#2a2a2a',
-        },
+        ink: ink,
+        bone: bone,
+        gold: gold,
+        amber: amber,
+        crimson: crimson,
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -63,8 +63,14 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        sans: ['var(--font-body)'],
+        mono: ['var(--font-mono)'],
+        display: ['var(--font-display)'],
+      },
+      boxShadow: {
+        warm:
+          '0 1px 0 rgba(212,175,55,0.04), 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35)',
+        'glow-gold': '0 0 0 1px rgba(212,175,55,0.18), 0 6px 20px rgba(184,138,31,0.12)',
       },
       keyframes: {
         'accordion-down': {
@@ -75,19 +81,36 @@ const config: Config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
-        'film-sprocket': {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-4px)' },
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'pulse-ring': {
+          '0%': { boxShadow: '0 0 0 0 rgba(212,175,55,0.35)' },
+          '70%': { boxShadow: '0 0 0 8px rgba(212,175,55,0)' },
+          '100%': { boxShadow: '0 0 0 0 rgba(212,175,55,0)' },
+        },
+        'gold-shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'film-sprocket': 'film-sprocket 2s ease-in-out infinite',
+        'fade-up': 'fade-up 200ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'fade-in': 'fade-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'pulse-ring': 'pulse-ring 2.4s ease-in-out infinite',
+        'gold-shimmer': 'gold-shimmer 2.4s linear infinite',
       },
     },
   },
   plugins: [animate],
 };
 
+void fonts;
 export default config;

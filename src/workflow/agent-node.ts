@@ -9,12 +9,11 @@ import {
 import { TextBlock, type StateStore } from '@strands-agents/sdk';
 import { emit, emitAgentOutput } from '@/src/stream/sinks';
 import { logger } from '@/src/lib/logger';
-import type { AgentId } from '@/src/agents';
 
 const log = logger('workflow/agent-node');
 
 export interface AgentNodeOptions<T> {
-  id: AgentId;
+  id: string;
   description: string;
   runId: string;
   invoke: (state: MultiAgentState, app: StateStore) => Promise<T>;

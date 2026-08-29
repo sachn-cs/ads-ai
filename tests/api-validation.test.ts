@@ -43,14 +43,26 @@ describe('SelectVariantRequestSchema', () => {
 });
 
 describe('CreateRunRequestSchema', () => {
-  it('accepts prompt only', () => {
-    expect(CreateRunRequestSchema.safeParse({ prompt: 'a quiet morning letter' }).success).toBe(true);
+  it('accepts prompt + productionId', () => {
+    expect(
+      CreateRunRequestSchema.safeParse({
+        prompt: 'a quiet morning letter',
+        productionId: 'prod-1',
+      }).success,
+    ).toBe(true);
   });
   it('accepts runId only (resume flow)', () => {
-    expect(CreateRunRequestSchema.safeParse({ runId: 'abc123' }).success).toBe(true);
+    expect(
+      CreateRunRequestSchema.safeParse({ runId: 'abc123', productionId: 'prod-1' }).success,
+    ).toBe(true);
   });
   it('rejects empty body', () => {
     expect(CreateRunRequestSchema.safeParse({}).success).toBe(false);
+  });
+  it('rejects when productionId missing', () => {
+    expect(
+      CreateRunRequestSchema.safeParse({ prompt: 'a quiet morning letter' }).success,
+    ).toBe(false);
   });
 });
 

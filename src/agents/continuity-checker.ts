@@ -18,11 +18,18 @@ export const continuityCheckerSpec = {
 
 export const ContinuityIssueSchema = z.object({
   shotId: z.string(),
-  dimension: z.enum(['continuity', 'character', 'location', 'prop', 'palette', 'beat']),
-  severity: z.enum(['info', 'warning', 'blocker']),
-  description: z.string(),
-  suggestedFix: z.string(),
-});
+  kind: z.enum(['wardrobe', 'object', 'spatial', 'emotional', 'temporal', 'palette', 'character', 'location', 'prop', 'beat']).optional(),
+  dimension: z.enum(['palette', 'continuity', 'character', 'location', 'prop', 'beat']).optional(),
+  severity: z.enum(['info', 'warning', 'blocker', 'warn', 'error']),
+  message: z.string().min(10).optional(),
+  description: z.string().min(20).optional(),
+  suggestedFix: z.string().min(10).optional(),
+}).transform((v) => ({
+  shotId: v.shotId,
+  kind: (v.kind ?? (v.dimension as unknown as 'wardrobe' | 'object' | 'spatial' | 'emotional' | 'temporal' | 'palette' | 'character' | 'location' | 'prop' | 'beat') ?? 'beat') as 'wardrobe' | 'object' | 'spatial' | 'emotional' | 'temporal',
+  severity: v.severity === 'warning' ? 'warn' : v.severity === 'blocker' ? 'error' : v.severity === 'warn' ? 'warn' : v.severity === 'error' ? 'error' : 'info',
+  message: v.message ?? v.description ?? '',
+}));
 export type ContinuityIssue = z.infer<typeof ContinuityIssueSchema>;
 
 export const ContinuityIssuesSchema = z.array(ContinuityIssueSchema);

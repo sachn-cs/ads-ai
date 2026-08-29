@@ -20,6 +20,9 @@ import type {
 import type { CinestudioConfig } from '@/src/types';
 import type { StateStore } from '@strands-agents/sdk';
 import { AgentNode } from './agent-node';
+import { logger } from '@/src/lib/logger';
+
+const log = logger('workflow/agent-nodes');
 import {
   invokeShowrunner,
 } from '@/src/agents/showrunner';
@@ -45,9 +48,6 @@ import {
 import {
   invokeCritique,
 } from '@/src/agents/critique';
-import {
-  invokeIterationController,
-} from '@/src/agents/iteration-controller';
 import {
   invokeScoring,
 } from '@/src/agents/scoring';
@@ -75,7 +75,24 @@ import {
 import {
   invokeStyleGuide,
 } from '@/src/agents/style-guide';
-import { IterationControlReportSchema } from '@/src/models';
+import { invokeStoryAnalyst, type StoryAnalysis } from '@/src/agents/story-analyst';
+import { invokeCostumeDesigner, type CostumeRevision } from '@/src/agents/costume-designer';
+import { invokeEnvironmentDesigner, type EnvironmentRevision } from '@/src/agents/environment-designer';
+import { invokeSceneComposer, type SceneList } from '@/src/agents/scene-composer';
+import {
+  invokeContinuitySupervisor,
+  type SupervisorReport,
+} from '@/src/agents/continuity-supervisor';
+import { invokeTransitionDesigner, type TransitionPlan } from '@/src/agents/transition-designer';
+import { invokePacingAnalyst, type PacingReport } from '@/src/agents/pacing-analyst';
+import {
+  invokeVisualQualityReviewer,
+  type VisualQualityReport,
+} from '@/src/agents/visual-quality-reviewer';
+import {
+  invokeProductionCoordinator,
+  type CoordinatorReport,
+} from '@/src/agents/production-coordinator';
 
 function read<T>(app: StateStore, key: string): T {
   const v = app.get(key);
@@ -107,6 +124,102 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     invoke: async (_state, app) =>
       invokeStyleGuide(t, read<CinestudioBrief>(app, 'brief')),
     persistKey: 'styleGuide',
+  });
+
+  const storyAnalyst = new AgentNode<StoryAnalysis>({
+    id: 'story_analyst',
+    description: 'Story Analyst.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeStoryAnalyst(t, read<CinestudioBrief>(app, 'brief')),
+    persistKey: 'storyAnalysis',
+  });
+
+  const costumeDesigner = new AgentNode<CostumeRevision>({
+    id: 'costume_designer',
+    description: 'Costume Designer.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeCostumeDesigner(t, read<CharacterCast>(app, 'cast')),
+    persistKey: 'costumeRevision',
+  });
+
+  const environmentDesigner = new AgentNode<EnvironmentRevision>({
+    id: 'environment_designer',
+    description: 'Environment Designer.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeEnvironmentDesigner(t, read<WorldDesign>(app, 'world')),
+    persistKey: 'environmentRevision',
+  });
+
+  const sceneComposer = new AgentNode<SceneList>({
+    id: 'scene_composer',
+    description: 'Scene Composer.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeSceneComposer(t, read<ScriptBreakdown>(app, 'script')),
+    persistKey: 'sceneList',
+  });
+
+  const continuitySupervisor = new AgentNode<SupervisorReport>({
+    id: 'continuity_supervisor',
+    description: 'Continuity Supervisor (fan-out to Continuity, Transition, Pacing, VisualQuality).',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeContinuitySupervisor(t, read<Storyboard>(app, 'storyboard')),
+    persistKey: 'supervisorReport',
+  });
+
+  const transitionDesigner = new AgentNode<TransitionPlan>({
+    id: 'transition_designer',
+    description: 'Transition Designer.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeTransitionDesigner(t, read<Storyboard>(app, 'storyboard')),
+    persistKey: 'transitionPlan',
+  });
+
+  const pacingAnalyst = new AgentNode<PacingReport>({
+    id: 'pacing_analyst',
+    description: 'Pacing Analyst.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokePacingAnalyst(t, read<ScriptBreakdown>(app, 'script')),
+    persistKey: 'pacingReport',
+  });
+
+  const visualQualityReviewer = new AgentNode<VisualQualityReport>({
+    id: 'visual_quality_reviewer',
+    description: 'Visual Quality Reviewer.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeVisualQualityReviewer(t, read<Storyboard>(app, 'storyboard'), read<StyleGuide>(app, 'styleGuide')),
+    persistKey: 'visualQualityReport',
+  });
+
+  const productionCoordinator = new AgentNode<CoordinatorReport>({
+    id: 'production_coordinator',
+    description: 'Production Coordinator.',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeProductionCoordinator(t, {
+        agentStatuses: [
+          { agentId: 'showrunner', status: 'done' },
+          { agentId: 'style_guide', status: 'done' },
+          { agentId: 'character_designer', status: 'done' },
+          { agentId: 'world_builder', status: 'done' },
+          { agentId: 'script_writer', status: 'done' },
+          { agentId: 'shot_planner', status: 'done' },
+          { agentId: 'continuity_supervisor', status: 'done' },
+          { agentId: 'scoring', status: 'done' },
+        ],
+        unresolved: read<ContinuityIssue[]>(app, 'continuityIssues').map((c) => ({
+          kind: c.kind,
+          message: c.message,
+        })),
+      }),
+    persistKey: 'coordinatorReport',
   });
 
   const scriptWriter = new AgentNode<ScriptBreakdown>({
@@ -192,12 +305,30 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     runId: '',
     invoke: async (_state, app) => {
       const renderResults = read<ShotRenderResult[]>(app, 'renderResults');
-      return invokeContinuityChecker(t, {
+      const productionId = (app.get('productionId') as string | undefined) ?? '';
+      const issues = await invokeContinuityChecker(t, {
         shots: renderResults,
         cast: read<CharacterCast>(app, 'cast'),
         world: read<WorldDesign>(app, 'world'),
         script: read<ScriptBreakdown>(app, 'script'),
       });
+      if (productionId) {
+        const { createContinuityEntry } = await import('@/src/db/continuity-log');
+        for (const issue of issues) {
+          try {
+            createContinuityEntry({
+              productionId,
+              kind: issue.kind,
+              severity: issue.severity === 'warn' ? 'warn' : issue.severity === 'error' ? 'error' : 'info',
+              message: issue.message,
+              shotId: issue.shotId,
+            });
+          } catch (err) {
+            log.warn('continuity_persist_failed', { err: String(err) });
+          }
+        }
+      }
+      return issues;
     },
     persistKey: 'continuityIssues',
   });
@@ -234,26 +365,6 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
       return result;
     },
     persistKey: 'composite',
-  });
-
-  const iterationController = new AgentNode<unknown>({
-    id: 'iteration_controller',
-    description: 'Iteration controller.',
-    runId: '',
-    invoke: async (_state, app) => {
-      const critique = read<CritiqueReport>(app, 'critique');
-      const composite = read<CompositeQualityReport>(app, 'composite');
-      const result = await invokeIterationController(t, {
-        critique,
-        composite,
-        cycleNumber: composite.cycleNumber ?? 1,
-        maxCycles: cfg.defaults.maxIterations,
-      });
-      const parsed = IterationControlReportSchema.safeParse(result);
-      app.set('iterationReport', (parsed.success ? parsed.data : result) as unknown as Record<string, unknown>);
-      return result;
-    },
-    persistKey: 'iterationReport',
   });
 
   const editorNode = new AgentNode<AssemblyPlan>({
@@ -387,15 +498,24 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
 
   return {
     showrunner,
-    scriptWriter,
+    styleGuideNode,
+    storyAnalyst,
     characterDesigner,
+    costumeDesigner,
+    environmentDesigner,
+    scriptWriter,
+    sceneComposer,
     worldBuilder,
     storyboardArtist,
     shotPlanner,
+    continuitySupervisor,
+    transitionDesigner,
+    pacingAnalyst,
+    visualQualityReviewer,
     continuityChecker,
     critiqueNode,
     scoringNode,
-    iterationController,
+    productionCoordinator,
     editorNode,
     coloristNode,
     composerNode,
@@ -403,6 +523,5 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     voiceNode,
     distributionNode,
     rightsNode,
-    styleGuideNode,
   };
 }
