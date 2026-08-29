@@ -304,6 +304,28 @@ export const SCHEMA_DDL: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS ix_comments_production ON comments(production_id, entity_type, entity_id)`,
 
+  /* ===== agent_state ===== */
+  `CREATE TABLE IF NOT EXISTS agent_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    production_id TEXT,
+    agent_id TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT '',
+    current_task TEXT NOT NULL DEFAULT '',
+    state TEXT NOT NULL DEFAULT 'pending',
+    inputs_json TEXT NOT NULL DEFAULT '{}',
+    outputs_json TEXT NOT NULL DEFAULT '{}',
+    dependencies_json TEXT NOT NULL DEFAULT '[]',
+    confidence REAL NOT NULL DEFAULT 0,
+    warnings_json TEXT NOT NULL DEFAULT '[]',
+    history_json TEXT NOT NULL DEFAULT '[]',
+    started_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_agent_state_run ON agent_state(run_id, agent_id)`,
+  `CREATE INDEX IF NOT EXISTS ix_agent_state_production ON agent_state(production_id, updated_at DESC)`,
+
   /* ===== versions ===== */
   `CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
