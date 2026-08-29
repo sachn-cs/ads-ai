@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Film } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+
 import type { Production } from '@/src/db/productions';
 
 export function ProductionCard({ production }: { production: Production }) {
@@ -14,32 +14,22 @@ export function ProductionCard({ production }: { production: Production }) {
         : 'border-border text-bone';
 
   return (
-    <Link href={`/dashboard/productions/${production.id}`} className="group block">
-      <Card className="warm-shadow cinema-grain h-full transition-colors group-hover:border-gold/40 group-hover:shadow-glow-gold">
-        <CardContent className="space-y-3 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Film className="h-4 w-4 text-gold" />
-              <span className="font-mono text-xs text-muted-foreground">
-                v{production.currentVersion}
-              </span>
-            </div>
-            <Badge variant="outline" className={statusColor}>
+    <Link href={`/dashboard/productions/${production.id}`} className="group block h-full">
+      <Card className="warm-shadow cinema-grain h-full transition-colors group-hover:border-gold/40">
+        <CardContent className="space-y-1 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Film className="h-3.5 w-3.5 text-gold" />
+            <Badge variant="outline" className={`px-1.5 py-0 text-[10px] ${statusColor}`}>
               {production.status}
             </Badge>
           </div>
-          <h3 className="font-display text-xl leading-tight">{production.title}</h3>
-          <p className="line-clamp-2 text-sm text-muted-foreground">
-            {production.logline || 'No logline yet. Add one in Story.'}
+          <h3 className="font-display text-sm leading-tight">{production.title}</h3>
+          <p className="line-clamp-2 text-[11px] text-muted-foreground">
+            {production.logline || 'No logline yet.'}
           </p>
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-xs text-muted-foreground">
-              Updated {new Date(production.updatedAt).toLocaleDateString()}
-            </span>
-            <Button size="sm" variant="ghost" className="text-gold hover:text-gold/80">
-              Open
-            </Button>
-          </div>
+          <span className="block text-[10px] text-muted-foreground">
+            v{production.currentVersion} · {new Date(production.updatedAt).toLocaleDateString()}
+          </span>
         </CardContent>
       </Card>
     </Link>
