@@ -19,3 +19,4 @@ export * from './idea';
 export * from './style';
 export * from './directives';
 export * from '../agents/continuity-checker';
+export * from '../agents/cinematographer';
