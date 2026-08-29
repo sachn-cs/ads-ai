@@ -11,41 +11,37 @@ export default function ProductionsListPage() {
   const productions = listProductions(100, 0);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 animate-fade-in">
-      <header className="flex items-end justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-gold">Productions</p>
-          <h1 className="font-display text-3xl font-semibold">Your films</h1>
-          <p className="text-sm text-muted-foreground">
-            Every story is a production. Open one to work on Story, Characters, Wardrobe, Locations, Scenes,
-            Shots, Transitions, and Continuity.
-          </p>
+    <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3 animate-fade-in">
+      <header className="flex items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Productions</p>
+          <h1 className="font-display text-2xl font-semibold leading-tight">Your films</h1>
         </div>
-        <Button asChild>
+        <Button asChild size="sm">
           <Link href="/dashboard/productions/new">
-            <Plus className="h-4 w-4" /> New production
+            <Plus className="h-3.5 w-3.5" /> New production
           </Link>
         </Button>
       </header>
 
       {productions.length === 0 ? (
-        <Card className="border-gold/30 warm-shadow">
+        <Card className="warm-shadow border-gold/30 flex-1">
           <CardHeader>
-            <CardTitle>No productions yet</CardTitle>
+            <CardTitle className="text-lg">No productions yet</CardTitle>
             <CardDescription>
               Create your first production. Cinestudio's swarm will help shape it before any rendering.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
+          <CardContent className="pb-4">
+            <Button asChild size="sm">
               <Link href="/dashboard/productions/new">
-                <Plus className="h-4 w-4" /> New production
+                <Plus className="h-3.5 w-3.5" /> New production
               </Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid flex-1 grid-cols-2 gap-2 overflow-hidden md:grid-cols-3 xl:grid-cols-4">
           {productions.map((p) => (
             <ProductionCard key={p.id} production={p} />
           ))}
