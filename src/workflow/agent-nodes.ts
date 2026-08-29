@@ -94,6 +94,7 @@ import {
   type CoordinatorReport,
 } from '@/src/agents/production-coordinator';
 import { invokeCinematographer, type CinematographyPlan } from '@/src/agents/cinematographer';
+import { invokeSceneEditor, type SceneRevisions } from '@/src/agents/scene-editor';
 
 function read<T>(app: StateStore, key: string): T {
   const v = app.get(key);
@@ -206,6 +207,15 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     invoke: async (_state, app) =>
       invokeCinematographer(t, read<Storyboard>(app, 'storyboard')),
     persistKey: 'cinematographyPlan',
+  });
+
+  const sceneEditor = new AgentNode<SceneRevisions>({
+    id: 'scene_editor',
+    description: 'Scene Editor (per-scene rewrite).',
+    runId: '',
+    invoke: async (_state, app) =>
+      invokeSceneEditor(t, read<ScriptBreakdown>(app, 'script')),
+    persistKey: 'sceneRevisions',
   });
 
   const productionCoordinator = new AgentNode<CoordinatorReport>({
@@ -514,6 +524,7 @@ export function buildAgentNodes(cfg: CinestudioConfig) {
     costumeDesigner,
     environmentDesigner,
     scriptWriter,
+    sceneEditor,
     sceneComposer,
     worldBuilder,
     storyboardArtist,
