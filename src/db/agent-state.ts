@@ -52,10 +52,23 @@ function rowToState(r: AgentStateRow): AgentState {
     dependencies: safeParseJsonArray(r.dependencies_json),
     confidence: r.confidence,
     warnings: safeParseJsonArray(r.warnings_json),
-    history: safeParseJsonArray(r.history_json) as AgentState['history'],
+    history: parseHistory(r.history_json),
     startedAt: r.started_at,
     updatedAt: r.updated_at,
   };
+}
+
+function parseHistory(s: string): AgentState['history'] {
+  try {
+    const v = JSON.parse(s);
+    if (!Array.isArray(v)) return [];
+    return v.filter(
+      (x): x is { ts: string; event: string; data?: unknown } =>
+        x && typeof x === 'object' && typeof (x as { ts?: unknown }).ts === 'string' && typeof (x as { event?: unknown }).event === 'string',
+    );
+  } catch {
+    return [];
+  }
 }
 
 function safeParseJson(s: string): Record<string, unknown> {
